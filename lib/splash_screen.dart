@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
+import 'Sign_up_in/login.dart'; // Import the LoginScreen class
 
 class SplashScreen extends StatelessWidget {
-  const SplashScreen({super.key});
-
   @override
   Widget build(BuildContext context) {
+    // Navigate to LoginScreen after 2 seconds
+    Future.delayed(const Duration(seconds: 2), () {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => LoginScreen()),
+      );
+    });
+
     return Scaffold(
       backgroundColor: Colors.white, // Background color
       body: Center(
@@ -14,10 +21,10 @@ class SplashScreen extends StatelessWidget {
             // Logo Image
             Image.asset(
               'assets/AuraLogo.png',
-              width: 1000, // Adjust the width
+              width: 280, // Adjust the width
               height: 280, // Adjust the height
             ),
-            SizedBox(height: 10), // Small space between logo and tagline
+            SizedBox(height: 20), // Space between logo and tagline
             // Tagline
             Text(
               "YOUR AI SHOPPING ASSISTANT",
@@ -27,7 +34,7 @@ class SplashScreen extends StatelessWidget {
                 color: Colors.black54, // Slightly gray text
               ),
             ),
-            SizedBox(height: 30), // Larger space before the progress indicator
+            SizedBox(height: 20), // Space before the progress indicator
             // Loading Indicator
             SizedBox(
               width: 100,
@@ -42,5 +49,4 @@ class SplashScreen extends StatelessWidget {
     );
   }
 }
-
 
