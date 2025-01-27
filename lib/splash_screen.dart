@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class SplashScreen extends StatelessWidget {
+  const SplashScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -12,10 +14,10 @@ class SplashScreen extends StatelessWidget {
             // Logo Image
             Image.asset(
               'assets/AuraLogo.png',
-              width: 150, // Adjust the width
-              height: 150, // Adjust the height
+              width: 1000, // Adjust the width
+              height: 280, // Adjust the height
             ),
-            SizedBox(height: 8), // Space between logo and tagline
+            SizedBox(height: 10), // Small space between logo and tagline
             // Tagline
             Text(
               "YOUR AI SHOPPING ASSISTANT",
@@ -25,7 +27,7 @@ class SplashScreen extends StatelessWidget {
                 color: Colors.black54, // Slightly gray text
               ),
             ),
-            SizedBox(height: 40), // Space before the progress indicator
+            SizedBox(height: 30), // Larger space before the progress indicator
             // Loading Indicator
             SizedBox(
               width: 100,
@@ -40,3 +42,5 @@ class SplashScreen extends StatelessWidget {
     );
   }
 }
+
+
