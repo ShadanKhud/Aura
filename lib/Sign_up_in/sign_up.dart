@@ -1,9 +1,79 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:aura_app/Sign_up_in/login.dart';
 import 'package:aura_app/Sign_up_in/password_field.dart';
 
-class SignUpScreen extends StatelessWidget {
+
+class SignUpScreen extends StatefulWidget {
+  @override
+  _SignUpScreenState createState() => _SignUpScreenState();
+}
+class _SignUpScreenState extends State<SignUpScreen> {
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _isPasswordValid = false; // Track password validation state
+
+  void _showErrorDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Error"),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSuccessDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Success"),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK"),
+          ),
+        ],
+      ),
+    );
+  }
+
+Future<void> _createAccount() async {
+  String email = _emailController.text.trim();
+  String password = _passwordController.text.trim();
+
+  if (email.isEmpty || password.isEmpty) {
+    _showErrorDialog(context, "Please fill in all mandatory fields.");
+    return;
+  }
+
+  if (!_isPasswordValid) {
+    _showErrorDialog(context, "Password does not meet the required criteria.");
+    return;
+  }
+
+  try {
+    UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+    _showSuccessDialog(context, "Account created successfully!");
+    print("User created: ${userCredential.user?.email}");
+  } on FirebaseAuthException catch (e) {
+    _showErrorDialog(context, e.message ?? "An error occurred.");
+  }
+}
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -47,13 +117,29 @@ class SignUpScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             // Name Field
-            _buildTextField(label: 'Name', isMandatory: true),
+            _buildTextField(label: 'Name', isMandatory: true, controller: _nameController ),
             const SizedBox(height: 20),
             // Email Field
-            _buildTextField(label: 'Email', isMandatory: true),
+            // _buildTextField(label: 'Email', isMandatory: true, controller: _emailController ,),
+            TextField(
+              controller: _emailController,
+              isMandatory: true,
+              decoration: InputDecoration(
+                labelText: "Email",
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.emailAddress,
+            ),
             const SizedBox(height: 20),
             // Password Field with validation
-            PasswordField(),
+             PasswordField(
+              controller: _passwordController,
+              onPasswordValid: (isValid) {
+                setState(() {
+                  _isPasswordValid = isValid;
+                });
+              },
+            ),
             const SizedBox(height: 20),
             // Age Group Dropdown
             DropdownButtonFormField<String>(
@@ -90,10 +176,33 @@ class SignUpScreen extends StatelessWidget {
             const SizedBox(height: 20),
             // Create Account Button
             ElevatedButton(
-              onPressed: () {
-                // Create Account logic
-              },
-              style: ElevatedButton.styleFrom(
+              onPressed: () async {
+                print("Email entered: '${_emailController.text}'"); // Debugging output
+  String email = _emailController.text.trim();
+  String password = _passwordController.text.trim();
+  print("Email: $email, Password: $password, isPasswordValid: $_isPasswordValid");
+
+  if (email.isEmpty || password.isEmpty) {
+    _showErrorDialog(context, "Please fill in all mandatory fields.");
+    return;
+  }
+
+  if (!_isPasswordValid) {
+    _showErrorDialog(context, "Password does not meet the required criteria.");
+    return;
+  }
+
+  try {
+    UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+    _showSuccessDialog(context, "Account created successfully!");
+    print("User created: ${userCredential.user?.email}");
+  } on FirebaseAuthException catch (e) {
+    _showErrorDialog(context, e.message ?? "An error occurred.");
+  }
+},        style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF614FE0),
                 padding: const EdgeInsets.symmetric(vertical: 16.0),
                 shape: RoundedRectangleBorder(
@@ -167,7 +276,7 @@ class SignUpScreen extends StatelessWidget {
   }
 
   // Helper function for text fields
-  Widget _buildTextField({required String label, bool isMandatory = false}) {
+  Widget _buildTextField({required String label, bool isMandatory = false, required TextEditingController controller}) {
     return TextField(
       decoration: InputDecoration(
         label: _buildLabelWithAsterisk(label, isMandatory),

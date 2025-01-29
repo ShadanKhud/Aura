@@ -1,20 +1,27 @@
 import 'package:flutter/material.dart';
 
 class PasswordField extends StatefulWidget {
+  final TextEditingController controller;
+  final Function(bool) onPasswordValid; // Callback function
+
+  PasswordField({required this.controller, required this.onPasswordValid});
+
   @override
   _PasswordFieldState createState() => _PasswordFieldState();
 }
 
 class _PasswordFieldState extends State<PasswordField> {
   bool _obscureText = true;
-  String _password = "";
 
   // Validation rules
-  bool get _hasUppercase => _password.contains(RegExp(r'[A-Z]'));
-  bool get _hasLowercase => _password.contains(RegExp(r'[a-z]'));
-  bool get _hasNumber => _password.contains(RegExp(r'[0-9]'));
-  bool get _hasSpecialChar => _password.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>]'));
-  bool get _isAtLeast8 => _password.length >= 8;
+  bool get _hasUppercase => widget.controller.text.contains(RegExp(r'[A-Z]'));
+  bool get _hasLowercase => widget.controller.text.contains(RegExp(r'[a-z]'));
+  bool get _hasNumber => widget.controller.text.contains(RegExp(r'[0-9]'));
+  bool get _hasSpecialChar => widget.controller.text.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>]'));
+  bool get _isAtLeast8 => widget.controller.text.length >= 8;
+
+  bool get _isPasswordValid =>
+      _hasUppercase && _hasLowercase && _hasNumber && _hasSpecialChar && _isAtLeast8;
 
   @override
   Widget build(BuildContext context) {
@@ -22,11 +29,11 @@ class _PasswordFieldState extends State<PasswordField> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TextField(
+          controller: widget.controller, // Use the provided controller
           obscureText: _obscureText,
           onChanged: (value) {
-            setState(() {
-              _password = value;
-            });
+            setState(() {}); // Refresh validation UI
+            widget.onPasswordValid(_isPasswordValid); // Notify parent if valid
           },
           decoration: InputDecoration(
             label: _buildLabelWithAsterisk('Password'),
@@ -73,7 +80,7 @@ class _PasswordFieldState extends State<PasswordField> {
         Icon(
           isValid ? Icons.check_circle_outline : Icons.radio_button_unchecked,
           color: isValid ? Colors.green : Colors.grey,
-          size: 16, // Reduced size to match text weight better
+          size: 16,
         ),
         const SizedBox(width: 8),
         Text(
@@ -81,7 +88,7 @@ class _PasswordFieldState extends State<PasswordField> {
           style: TextStyle(
             color: isValid ? Colors.green : Colors.black54,
             fontSize: 14,
-            fontWeight: FontWeight.w300, // Consistent light font weight
+            fontWeight: FontWeight.w300,
           ),
         ),
       ],
