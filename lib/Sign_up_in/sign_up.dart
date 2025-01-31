@@ -123,7 +123,7 @@ Future<void> _createAccount() async {
             // _buildTextField(label: 'Email', isMandatory: true, controller: _emailController ,),
             TextField(
               controller: _emailController,
-              isMandatory: true,
+             
               decoration: InputDecoration(
                 labelText: "Email",
                 border: OutlineInputBorder(),
