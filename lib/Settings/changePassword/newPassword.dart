@@ -1,0 +1,243 @@
+import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+class NewPasswordPage extends StatefulWidget {
+  @override
+  _NewPasswordPageState createState() => _NewPasswordPageState();
+}
+
+class _NewPasswordPageState extends State<NewPasswordPage> {
+  final TextEditingController _newPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
+  bool _isPasswordValid = false;
+  bool _isPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
+  bool _isLoading = false;
+
+  void _validatePassword(String password) {
+    setState(() {
+      _isPasswordValid = password.length >= 8 &&
+          password.contains(RegExp(r'[A-Z]')) && // Uppercase letter
+          password.contains(RegExp(r'[a-z]')) && // Lowercase letter
+          password.contains(RegExp(r'[0-9]')) && // Number
+          password
+              .contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]')); // Special character
+    });
+  }
+
+  Future<void> _updatePassword() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    String newPassword = _newPasswordController.text.trim();
+    String confirmPassword = _confirmPasswordController.text.trim();
+    User? user = FirebaseAuth.instance.currentUser;
+
+    if (newPassword.isEmpty || confirmPassword.isEmpty) {
+      _showErrorDialog("Please fill in all mandatory fields.");
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
+
+    if (!_isPasswordValid) {
+      _showErrorDialog("Password does not meet the required criteria.");
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
+
+    if (newPassword != confirmPassword) {
+      _showErrorDialog("Passwords do not match.");
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
+
+    if (user != null) {
+      try {
+        await user.updatePassword(newPassword);
+        _showSuccessDialog("Password updated successfully!");
+        Navigator.pop(context);
+      } catch (e) {
+        _showErrorDialog("Error updating password: ${e.toString()}");
+      }
+    }
+
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Error"),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSuccessDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Success"),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Change Password"),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back,
+              color: Color.fromARGB(255, 47, 47, 47)),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 30.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "New Password",
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              "Enter your new password and remember it.",
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+            const SizedBox(height: 20),
+
+            // New Password Field
+            TextField(
+              controller: _newPasswordController,
+              obscureText: !_isPasswordVisible,
+              onChanged: _validatePassword,
+              decoration: InputDecoration(
+                labelText: "Password *",
+                border: OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  icon: Icon(_isPasswordVisible
+                      ? Icons.visibility
+                      : Icons.visibility_off),
+                  onPressed: () {
+                    setState(() {
+                      _isPasswordVisible = !_isPasswordVisible;
+                    });
+                  },
+                ),
+              ),
+            ),
+
+            // Password Validation Rules
+            const SizedBox(height: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildValidationIndicator("At least 8 characters",
+                    _newPasswordController.text.length >= 8),
+                _buildValidationIndicator("At least 1 uppercase letter",
+                    _newPasswordController.text.contains(RegExp(r'[A-Z]'))),
+                _buildValidationIndicator("At least 1 lowercase letter",
+                    _newPasswordController.text.contains(RegExp(r'[a-z]'))),
+                _buildValidationIndicator("At least 1 number",
+                    _newPasswordController.text.contains(RegExp(r'[0-9]'))),
+                _buildValidationIndicator(
+                    "At least 1 special character (!@#\$%^&*)",
+                    _newPasswordController.text
+                        .contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            // Confirm Password Field
+            TextField(
+              controller: _confirmPasswordController,
+              obscureText: !_isConfirmPasswordVisible,
+              decoration: InputDecoration(
+                labelText: "Confirm Password *",
+                border: OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  icon: Icon(_isConfirmPasswordVisible
+                      ? Icons.visibility
+                      : Icons.visibility_off),
+                  onPressed: () {
+                    setState(() {
+                      _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                    });
+                  },
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 30),
+
+            // Save Button
+            ElevatedButton(
+              onPressed: _isLoading ? null : _updatePassword,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF614FE0),
+                padding: const EdgeInsets.symmetric(vertical: 14.0),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+              ),
+              child: _isLoading
+                  ? CircularProgressIndicator(color: Colors.white)
+                  : const Center(
+                      child: Text("Save",
+                          style: TextStyle(fontSize: 18, color: Colors.white)),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Password validation indicators
+  Widget _buildValidationIndicator(String text, bool isValid) {
+    return Row(
+      children: [
+        Icon(
+          isValid ? Icons.check_circle : Icons.cancel,
+          size: 16,
+          color: isValid ? Colors.green : Colors.grey,
+        ),
+        const SizedBox(width: 5),
+        Text(
+          text,
+          style: TextStyle(
+              color: isValid ? Colors.green : Colors.grey, fontSize: 14),
+        ),
+      ],
+    );
+  }
+}
