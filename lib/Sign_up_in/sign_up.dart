@@ -1,3 +1,4 @@
+import 'package:aura_app/Sign_up_in/VerificationPage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -53,7 +54,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 Future<void> _createAccount() async {
   String email = _emailController.text.trim();
   String password = _passwordController.text.trim();
- String? uid ;
+ //String? uid ;
  User? user;
   if (email.isEmpty || password.isEmpty) {
     _showErrorDialog(context, "Please fill in all mandatory fields.");
@@ -83,20 +84,26 @@ Future<void> _createAccount() async {
      email: email,
      password: password,
     );
-  if (userCredential.user == null) {
-      _showErrorDialog(context, "User creation failed. Please try again.");
-      return;
-    }
+ 
     User? user = userCredential.user;
-    String? uid = userCredential.user?.uid; 
 
-    // Update the user's display name /// not sure of those 2 lines 
-    await userCredential.user?.updateDisplayName(_nameController.text.trim());
-    await userCredential.user?.reload(); // Refresh user data
 
     if (user != null) {
       print("DEBUG: User created - ${user.email}");
+
+    // Update the user's display name /// not sure of those 2 lines 
+      await user.updateDisplayName(_nameController.text.trim());
+      await user.reload(); // Refresh user data
+
+      await user.sendEmailVerification();
+      addUserDetails(user,email,_nameController.text.trim(),_selectedAgeGroup,_selectedGender);
+
       _showSuccessDialog(context, "Account created successfully!");
+
+       Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => VerificationPage()),
+      );
     } else {
       print("DEBUG: User is null after creation.");
       _showErrorDialog(context, "User creation failed.");
@@ -111,23 +118,23 @@ Future<void> _createAccount() async {
   //user details
   //
   
-addUserDetails(user,email,_nameController.text.trim(),_selectedAgeGroup,_selectedGender);
 }
 Future<void> addUserDetails( User? user,
 String email,
  String name,
   String? age,
    String? gender )async {
-await FirebaseFirestore.instance.collection('customers').doc(user as String?).set({
-  
-  'email': email,
-  'name': name,
-  'age_group':age,
-  'gender':gender,
-  'isEmailVerified':false
-});
+  if (user != null) {
+    await FirebaseFirestore.instance.collection('customers').doc(user.uid).set({
+      'email': email,
+      'name': name,
+      'age_group': age,
+      'gender': gender,
+      'isEmailVerified': false,
+    });
 
-  print("Customer data saved with UID: $user");
+    print("Customer data saved with UID: ${user.uid}");
+  }
 }
 
   @override
