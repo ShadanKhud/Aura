@@ -1,11 +1,10 @@
-import 'package:aura_app/Sign_up_in/PlaceholderPage.dart';
+import 'package:aura_app/Sign_up_in/members/members1.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:aura_app/Sign_up_in/login.dart';
 import 'package:aura_app/Sign_up_in/password_field.dart';
-
 
 class VerificationPage extends StatefulWidget {
   @override
@@ -17,23 +16,24 @@ class _VerificationPageState extends State<VerificationPage> {
   bool _isResendEnabled = true; // Flag to disable resend button temporarily
 
   // Check if email is verified
-Future<void> _checkEmailVerification() async {
-  User? user = _auth.currentUser;
+  Future<void> _checkEmailVerification() async {
+    User? user = _auth.currentUser;
 
-  if (user != null) {
-    // Reload the user to get the latest status
-    await user.reload();
+    if (user != null) {
+      // Reload the user to get the latest status
+      await user.reload();
 
-    if (user.emailVerified) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => PlaceholderPage()), // Redirect to the next page
-      );
-    } else {
-      _showErrorDialog(context, "Your email is not verified yet.");
+      if (user.emailVerified) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (context) => members1()), // Redirect to the next page
+        );
+      } else {
+        _showErrorDialog(context, "Your email is not verified yet.");
+      }
     }
   }
-}
 
   Future<void> _resendVerificationEmail() async {
     User? user = _auth.currentUser;
@@ -117,7 +117,9 @@ Future<void> _checkEmailVerification() async {
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: _isResendEnabled ? _resendVerificationEmail : null, // Disable button temporarily
+              onPressed: _isResendEnabled
+                  ? _resendVerificationEmail
+                  : null, // Disable button temporarily
               child: const Text("Resend email verification"),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color.fromARGB(255, 193, 189, 218),

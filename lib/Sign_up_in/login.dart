@@ -3,6 +3,8 @@ import 'package:aura_app/Sign_up_in/sign_up.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:aura_app/Sign_up_in/members/members1.dart';
+import 'package:aura_app/Sign_up_in/members/addMembers.dart';
 import 'package:aura_app/Sign_up_in/PlaceholderPage.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -129,9 +131,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 onPressed: () {
                   // Forgot Password logic
                   Navigator.push(
-                  context,
-                 MaterialPageRoute(builder: (context) => ForgotPasswordPage()),
-                 );
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => ForgotPasswordPage()),
+                  );
                 },
                 child: const Text(
                   "Forgot password?",
@@ -211,7 +214,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       ..onTap = () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => SignUpScreen()),
+                          MaterialPageRoute(
+                              builder: (context) => SignUpScreen()),
                         );
                       },
                   ),
