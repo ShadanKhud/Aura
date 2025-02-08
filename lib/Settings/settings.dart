@@ -4,6 +4,7 @@ import 'package:aura_app/Home/homeList.dart';
 import 'package:aura_app/Settings/editInformation.dart';
 import 'package:aura_app/Sign_up_in/login.dart';
 import 'package:aura_app/Settings/changePassword/oldPassword.dart';
+import 'package:aura_app/Settings/ShippingAddresses/MyShippingAddresses.dart';
 
 class SettingsPage extends StatelessWidget {
   @override
@@ -113,7 +114,15 @@ class SettingsPage extends StatelessWidget {
                   ),
                   _buildListTile(Icons.location_on, "My Shipping Addresses",
                       color: const Color.fromARGB(255, 111, 111, 112),
-                      textColor: const Color.fromARGB(255, 111, 111, 112)),
+                      textColor: const Color.fromARGB(255, 111, 111, 112),
+                      onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => ShippingAddressesScreen()),
+                    );
+                  }
+                      ),
                   _buildListTile(Icons.credit_card, "My Credit Cards",
                       color: const Color.fromARGB(255, 111, 111, 112),
                       textColor: Color.fromARGB(255, 111, 111, 112)),
