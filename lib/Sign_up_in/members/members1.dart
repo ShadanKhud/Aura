@@ -10,6 +10,7 @@ class members1 extends StatelessWidget {
         backgroundColor: Colors.white, // Set AppBar background color to white
         foregroundColor: Colors.black, // Change the text color of the AppBar
         elevation: 0, // Remove shadow/elevation from the AppBar
+        automaticallyImplyLeading: false, // Remove the back arrow
         flexibleSpace: Align(
           alignment: Alignment.center,
           child: Image.asset(
