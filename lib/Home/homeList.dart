@@ -1,28 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:aura_app/Settings/settings.dart';
-import 'package:aura_app/Home/homeList.dart';
 
-class PlaceholderPage extends StatelessWidget {
+class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final User? user = FirebaseAuth.instance.currentUser;
+    final String? name = user?.displayName ?? "Unknown";
+    final String? email = user?.email ?? "Unknown";
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Complete'),
-      ),
+      appBar: AppBar(title: Text("Welcome, $name!")),
       body: Center(
-        child: const Text('Placeholder page - !'),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text("Email: $email", style: TextStyle(fontSize: 16)),
+            Text("Name: $name", style: TextStyle(fontSize: 16)),
+          ],
+        ),
       ),
+
+      /// Bottom Navigation Bar
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.grey,
+        selectedItemColor: const Color.fromARGB(255, 96, 95, 95),
         unselectedItemColor: Colors.grey,
-        // Settings tab index
+        currentIndex: 0, // home tab index
         onTap: (index) {
           if (index == 0) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => HomeScreen()),
-            );
+            return;
           } else if (index == 1) {
             //Navigator.pushReplacement(
             //context,
