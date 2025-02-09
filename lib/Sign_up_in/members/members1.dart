@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:aura_app/Sign_up_in/PlaceholderPage.dart'; // Import the PlaceholderPage
-import 'package:aura_app/Sign_up_in/members/members2.dart'; // Import the members2 page
+import 'package:aura_app/Sign_up_in/members/members2.dart';
+
+import '../../Home/homeList.dart'; // Import the members2 page
 
 class members1 extends StatelessWidget {
   @override
@@ -26,32 +28,56 @@ class members1 extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const SizedBox(height: 50),
+            const SizedBox(height: 20),
+            // Progress Indicator
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircleAvatar(
+                  radius: 5,
+                  backgroundColor: const Color(0xFF614FE0), // Active dot color
+                ),
+                const SizedBox(width: 10),
+                CircleAvatar(
+                  radius: 5,
+                  backgroundColor: const Color(0xFF614FE0), // Active dot color
+                ),
+                const SizedBox(width: 10),
+                CircleAvatar(
+                  radius: 5,
+                  backgroundColor: const Color(0xFF614FE0), // Inactive dot color
+                ),
+              ],
+            ),
+            const SizedBox(height: 30),
+            // Avatar Row
+            Image.asset(
+              'assets/members.png', // Add members avatar image
+              height: 85,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(height: 20),
             // Title
             const Text(
-              'Are you shopping for\n yourself only or others?',
+              'Are you shopping for yourself only or other people too?',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 24,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Colors.black,
               ),
             ),
             const SizedBox(height: 20),
             const Text(
-              'In Aura App, we have a "Manage Members"\n'
-              'feature, this feature allows you to shop for\n'
-              'different people in the best way possible\n'
-              'by displaying suitable items for them.',
+              'In Aura App, we have a "Manage Members" feature, this feature allows you to shop for different people in the best way possible by displaying suitable items for them.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.black54,
               ),
             ),
-            const SizedBox(height: 40), // Increased space before buttons
-
-            // Reversed the button order
+            const SizedBox(height: 30),
+            // Button for "I Shop for Other People"
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -76,6 +102,7 @@ class members1 extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
+            // Button for "I'm Shopping for Myself"
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -92,7 +119,7 @@ class members1 extends StatelessWidget {
                   // Navigate to PlaceholderPage when shopping for yourself
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => PlaceholderPage()),
+                    MaterialPageRoute(builder: (context) => HomeScreen()),
                   );
                 },
                 child: const Text(
@@ -102,6 +129,16 @@ class members1 extends StatelessWidget {
                     color: Color(0xFF614FE0), // Purple text color
                   ),
                 ),
+              ),
+            ),
+            const SizedBox(height: 2),
+            // Small Text under "I'm Shopping for Myself"
+            const Text(
+              'You can always enable this feature later in Settings',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.black54,
               ),
             ),
           ],

@@ -63,6 +63,18 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
   - assets/AuraLogo.png
+  - assets/emailIcon.png
+  - assets/members.png
+  - assets/avatar1.png
+  - assets/avatar2.png
+  - assets/avatar3.png
+  - assets/avatar4.png
+  - assets/avatar5.png
+  - assets/avatar6.png
+  - assets/avatar7.png
+  - assets/avatar8.png
+  - assets/avatar9.png
+
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

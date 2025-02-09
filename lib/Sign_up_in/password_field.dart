@@ -67,7 +67,10 @@ class _PasswordFieldState extends State<PasswordField> {
             _buildRule("Include at least 1 uppercase letter", _hasUppercase),
             _buildRule("Include at least 1 lowercase letter", _hasLowercase),
             _buildRule("Include at least 1 number", _hasNumber),
-            _buildRule("Include at least 1 special character (!@#\$%^&*)", _hasSpecialChar),
+            _buildRule(
+              "Include at least 1 special character\n(!@#\$%^&*)",
+              _hasSpecialChar,
+            ),
           ],
         ),
       ],
