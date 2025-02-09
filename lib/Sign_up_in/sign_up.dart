@@ -5,7 +5,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:aura_app/Sign_up_in/login.dart';
 import 'package:aura_app/Sign_up_in/password_field.dart';
-
+import 'package:google_sign_in/google_sign_in.dart';
+import 'AgeGenderSelectionPage.dart';
+import 'PlaceholderPage.dart'; 
 class SignUpScreen extends StatefulWidget {
   @override
   _SignUpScreenState createState() => _SignUpScreenState();
@@ -138,6 +140,51 @@ class _SignUpScreenState extends State<SignUpScreen> {
       print("Customer data saved with UID: ${user.uid}");
     }
   }
+Future<void> signInWithGoogle() async {
+  try {
+    final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+    if (googleUser == null) {
+      print("Google Sign-In cancelled.");
+      return;
+    }
+
+    final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+    final OAuthCredential credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
+
+    UserCredential userCredential =
+        await FirebaseAuth.instance.signInWithCredential(credential);
+    User? user = userCredential.user;
+
+    if (user != null) {
+      print("User signed in: ${user.email}");
+
+      // Check Firestore if age and gender are already set
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('customers')
+          .doc(user.uid)
+          .get();
+
+      if (userDoc.exists && userDoc.get('age_group') != null && userDoc.get('gender') != null) {
+        // Age and Gender already set -> Navigate to Home Page
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => PlaceholderPage()), 
+        );
+      } else {
+        // Missing Age and Gender -> Navigate to selection page
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => AgeGenderSelectionPage(user: user)),
+        );
+      }
+    }
+  } catch (e) {
+    print("Error signing in with Google: $e");
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -319,6 +366,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               child: OutlinedButton.icon(
                 onPressed: () {
                   // Google Sign-Up logic
+                  signInWithGoogle();
                 },
                 icon: const Icon(Icons.account_circle, color: Colors.black54),
                 label: const Text(

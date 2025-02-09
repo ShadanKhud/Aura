@@ -16,24 +16,29 @@ class _VerificationPageState extends State<VerificationPage> {
   bool _isResendEnabled = true; // Flag to disable resend button temporarily
 
   // Check if email is verified
-  Future<void> _checkEmailVerification() async {
-    User? user = _auth.currentUser;
+Future<void> _checkEmailVerification() async {
+  User? user = _auth.currentUser;
 
-    if (user != null) {
-      // Reload the user to get the latest status
-      await user.reload();
+  if (user != null) {
+    await user.reload();
+    user = _auth.currentUser; 
 
-      if (user.emailVerified) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-              builder: (context) => members1()), // Redirect to the next page
-        );
-      } else {
-        _showErrorDialog(context, "Your email is not verified yet.");
-      }
+    if (user != null && user.emailVerified) {
+      await FirebaseFirestore.instance.collection('customers').doc(user.uid).update({
+        'isEmailVerified': true,
+      });
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => members1()),
+      );
+    } else {
+      _showErrorDialog(context, "Your email is not verified yet.");
     }
   }
+}
+
+
 
   Future<void> _resendVerificationEmail() async {
     User? user = _auth.currentUser;

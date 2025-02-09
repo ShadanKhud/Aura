@@ -1,11 +1,15 @@
+import 'package:aura_app/Sign_up_in/AgeGenderSelectionPage.dart';
 import 'package:aura_app/Sign_up_in/forget_password.dart';
 import 'package:aura_app/Sign_up_in/sign_up.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:aura_app/Sign_up_in/members/members1.dart';
 import 'package:aura_app/Sign_up_in/members/addMembers.dart';
 import 'package:aura_app/Sign_up_in/PlaceholderPage.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -174,7 +178,21 @@ class _LoginScreenState extends State<LoginScreen> {
             SizedBox(
               width: double.infinity, // Ensures button spans full width
               child: OutlinedButton.icon(
-                onPressed: () {
+                onPressed: () async {
+                  signInWithGoogle();
+  /*try {
+    UserCredential? user = await signInWithGoogle();
+    if (user != null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => PlaceholderPage()),
+      );
+    } else {
+      _showErrorDialog(context, "Google Sign-In failed. Please try again.");
+    }
+  } catch (e) {
+    _showErrorDialog(context, "An error occurred: $e");
+  }*/
                   // Google Sign-In logic
                 },
                 icon: const Icon(
@@ -320,4 +338,75 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
+
+
+
+  Future<void> signInWithGoogle() async {
+  try {
+    final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+    if (googleUser == null) {
+      print("Google Sign-In cancelled.");
+      return;
+    }
+
+    final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+    final OAuthCredential credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
+
+    UserCredential userCredential =
+        await FirebaseAuth.instance.signInWithCredential(credential);
+    User? user = userCredential.user;
+
+    if (user != null) {
+      print("User signed in: ${user.email}");
+
+      // Check Firestore if age and gender are already set
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('customers')
+          .doc(user.uid)
+          .get();
+
+      if (userDoc.exists && userDoc.get('age_group') != null && userDoc.get('gender') != null) {
+        // Age and Gender already set -> Navigate to Home Page
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => PlaceholderPage()), 
+        );
+      } else {
+        // Missing Age and Gender -> Navigate to selection page
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => AgeGenderSelectionPage(user: user)),
+        );
+      }
+    }
+  } catch (e) {
+    print("Error signing in with Google: $e");
+  }
+}
+ /* Future<UserCredential?> signInWithGoogle() async {
+  try {
+    // 1. Trigger the Google Sign-In flow
+    final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+    if (googleUser == null) return null; // If user cancels sign-in
+
+    // 2. Get Google authentication details
+    final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+    // 3. Create a new credential for Firebase
+    final AuthCredential credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
+
+    // 4. Sign in with Firebase using the Google credential
+    return await FirebaseAuth.instance.signInWithCredential(credential);
+  } catch (e) {
+    print("Google Sign-In Error: $e");
+    return null;
+  }
+}
+*/
 }
