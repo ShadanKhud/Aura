@@ -23,7 +23,15 @@ class _AddMembersState extends State<addMembers> {
     'Teenager (13-17 years)',
     'Adult'
   ];
-  final List<String> _avatars = ['Avatar 1', 'Avatar 2', 'Avatar 3'];
+
+  final List<Map<String, String>> _avatars = List.generate(
+    9,
+        (index) => {
+      'name': 'Avatar ${index + 1}',
+      'image': 'assets/avatar${index + 1}.png',
+    },
+  );
+
 
   void _saveMember() async {
     if (!_formKey.currentState!.validate()) return;
@@ -39,7 +47,6 @@ class _AddMembersState extends State<addMembers> {
     }
 
     try {
-      // Find the correct customer document
       QuerySnapshot querySnapshot = await FirebaseFirestore.instance
           .collection('customers')
           .where('email', isEqualTo: userEmail)
@@ -55,7 +62,6 @@ class _AddMembersState extends State<addMembers> {
 
       String customerDocId = querySnapshot.docs.first.id;
 
-      // Get current member count
       QuerySnapshot memberSnapshot = await FirebaseFirestore.instance
           .collection('customers')
           .doc(customerDocId)
@@ -69,7 +75,6 @@ class _AddMembersState extends State<addMembers> {
         return;
       }
 
-      // Add member if limit not exceeded
       await FirebaseFirestore.instance
           .collection('customers')
           .doc(customerDocId)
@@ -86,7 +91,6 @@ class _AddMembersState extends State<addMembers> {
         SnackBar(content: Text("Member added successfully!")),
       );
 
-      // Navigate to the Manage Members Page
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => ManageMembersPage()),
@@ -128,10 +132,15 @@ class _AddMembersState extends State<addMembers> {
                 style: TextStyle(color: Colors.grey),
               ),
               const SizedBox(height: 32),
-              _buildTextField(label: 'Name', controller: _nameController),
+              _buildTextField(
+                label: 'Name',
+                isMandatory: true,
+                controller: _nameController,
+              ),
               const SizedBox(height: 20),
               _buildDropdownField(
                 label: 'Gender',
+                isMandatory: true,
                 value: _selectedGender,
                 options: _genders,
                 onChanged: (value) => setState(() => _selectedGender = value),
@@ -139,17 +148,13 @@ class _AddMembersState extends State<addMembers> {
               const SizedBox(height: 20),
               _buildDropdownField(
                 label: 'Age group',
+                isMandatory: true,
                 value: _selectedAgeGroup,
                 options: _ageGroups,
                 onChanged: (value) => setState(() => _selectedAgeGroup = value),
               ),
               const SizedBox(height: 20),
-              _buildDropdownField(
-                label: 'Avatar',
-                value: _selectedAvatar,
-                options: _avatars,
-                onChanged: (value) => setState(() => _selectedAvatar = value),
-              ),
+              _buildAvatarDropdownField(),
               const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
@@ -175,28 +180,32 @@ class _AddMembersState extends State<addMembers> {
     );
   }
 
-  Widget _buildTextField(
-      {required String label, required TextEditingController controller}) {
+  Widget _buildTextField({
+    required String label,
+    required bool isMandatory,
+    required TextEditingController controller,
+  }) {
     return TextFormField(
       controller: controller,
       decoration: InputDecoration(
-        labelText: label,
+        label: _buildLabelWithAsterisk(label, isMandatory),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
       ),
       validator: (value) =>
-          value == null || value.isEmpty ? 'Please enter a $label' : null,
+      value == null || value.isEmpty ? 'Please enter a $label' : null,
     );
   }
 
   Widget _buildDropdownField({
     required String label,
+    required bool isMandatory,
     required String? value,
     required List<String> options,
     required void Function(String?) onChanged,
   }) {
     return DropdownButtonFormField<String>(
       decoration: InputDecoration(
-        labelText: label,
+        label: _buildLabelWithAsterisk(label, isMandatory),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
       ),
       value: value,
@@ -205,6 +214,61 @@ class _AddMembersState extends State<addMembers> {
           .toList(),
       onChanged: onChanged,
       validator: (value) => value == null ? 'Please select a $label' : null,
+    );
+  }
+
+  Widget _buildAvatarDropdownField() {
+    return DropdownButtonFormField<String>(
+      decoration: InputDecoration(
+        label: _buildLabelWithAsterisk('Avatar', true),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
+      ),
+      value: _selectedAvatar, // Ensure this value matches the "name" field of the Map
+      items: _avatars
+          .map(
+            (avatar) => DropdownMenuItem(
+          value: avatar['name'], // The value here is the "name" field from the Map
+          child: Row(
+            children: [
+              Image.asset(
+                avatar['image']!,
+                height: 40,
+                width: 40,
+              ),
+              const SizedBox(width: 10),
+              Text(avatar['name']!),
+            ],
+          ),
+        ),
+      )
+          .toList(),
+      onChanged: (value) => setState(() {
+        _selectedAvatar = value; // Update the selected avatar based on the "name" field
+      }),
+      validator: (value) => value == null ? 'Please select an Avatar' : null,
+    );
+  }
+
+
+  Widget _buildLabelWithAsterisk(String label, bool isMandatory) {
+    return Row(
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.w500,
+            color: Colors.black,
+          ),
+        ),
+        if (isMandatory)
+          const Text(
+            " *",
+            style: TextStyle(
+              color: Color(0xFFEE4D4D), // Red Asterisk
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+      ],
     );
   }
 }
