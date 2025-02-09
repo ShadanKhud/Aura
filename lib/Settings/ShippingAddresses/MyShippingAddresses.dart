@@ -70,6 +70,7 @@ class ShippingAddressesScreen extends StatelessWidget {
                       street: doc['street'],
                       postalCode: doc['postalCode'],
                       full_Address: doc['full_Address'],
+                      country: doc['country'],
                     );
                     return AddressCard(address);
                   },
@@ -100,7 +101,8 @@ Future<List<Address>> fetchAddresses(String customerId) async {
       city: doc['city'],
       street: doc['street'],
       postalCode: doc['postalCode'],
-      full_Address: doc['full_Address'], // Ensure field names match Firestore
+      full_Address: doc['full_Address'],
+      country: doc['country'], // Ensure field names match Firestore
     );
   }).toList();
 }
@@ -129,6 +131,8 @@ class AddressCard extends StatelessWidget {
             Text("Region: ${address.region}"),
             Text("Postal Code: ${address.postalCode}"),
             Text("Phone: ${address.phoneNumber}"),
+            Text("country: ${address.country}"),
+
             SizedBox(height: 8),
             Align(
               alignment: Alignment.centerRight,

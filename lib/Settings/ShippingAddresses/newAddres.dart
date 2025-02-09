@@ -1,5 +1,9 @@
+import 'package:country_picker/country_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:country_state_city_picker/country_state_city_picker.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class AddAddressPage extends StatefulWidget {
   @override
@@ -8,6 +12,7 @@ class AddAddressPage extends StatefulWidget {
   AddAddressPage({required this.customerId});
   _AddAddressPageState createState() => _AddAddressPageState();
 }
+
 
 // Model: Represents Address Data
 class Address {
@@ -19,6 +24,7 @@ class Address {
   String street;
   String full_Address;
   String postalCode;
+  String country;
 
   Address({
     required this.customerId,
@@ -29,6 +35,7 @@ class Address {
     required this.street,
     required this.postalCode,
     required this.full_Address,
+    required this.country,
   });
 
   Map<String, dynamic> toMap() {
@@ -41,12 +48,179 @@ class Address {
       'street': street,
       'postalCode': postalCode,
       'full_Address': full_Address, // ✅ FIXED (Now it's included!)
+      'country':country,
     };
   }
 }
 
 class _AddAddressPageState extends State<AddAddressPage> {
   final _formKey = GlobalKey<FormState>();
+String country = "";
+String region = "";
+String city = "";
+String countrycode ="";
+  List<String> countries = [];
+  List<String> regions = [];
+  List<String> cities = [];
+Map<String, String> regionCodeMap = {};
+  @override
+  void initState() {
+    super.initState();
+    fetchCountries();
+  }
+// ✅ Fetch Countries from REST Countries API
+  Future<void> fetchCountries() async {
+    final response = await http.get(Uri.parse("https://restcountries.com/v3.1/all"));
+    if (response.statusCode == 200) {
+      final List data = json.decode(response.body);
+      setState(() {
+        countries = data.map((country) => country['name']['common'].toString()).toList();
+      });
+    }
+  }
+ 
+  // ✅ Fetch Regions (States) from GeoNames
+Future<void> fetchRegions(String countryCode) async {
+    print("Fetching regions for: $countryCode");
+
+    final response = await http.get(Uri.parse(
+        "http://api.geonames.org/searchJSON?country=$countryCode&featureClass=A&featureCode=ADM1&maxRows=50&username=munirahi"));
+
+    if (response.statusCode == 200) {
+      final List data = json.decode(response.body)['geonames'];
+      print("Regions found: ${data.length}");
+
+      setState(() {
+        regions = data.map((region) => region['name'].toString()).toList();
+        regionCodeMap.clear(); // ✅ Reset the mapping
+
+        for (var region in data) {
+          String name = region['name'].toString();
+          String code = region['adminCode1'].toString();
+          regionCodeMap[name] = code;
+        }
+        print("Region Code Map: $regionCodeMap"); // ✅ Debugging
+      });
+    } else {
+      print("❌ Error fetching regions: ${response.statusCode}");
+      print("Response body: ${response.body}");
+    }
+  }
+
+ Future<void> fetchCities(String regionName, String countryCode) async {
+  print("Fetching cities for: country=$countryCode, region=$regionName");
+
+  String? regionCode = regionCodeMap[regionName];
+  if (regionCode == null) {
+    print("❌ No region code found for $regionName");
+    return;
+  }
+
+  print("Using region code: $regionCode"); // Debugging
+
+  final response = await http.get(Uri.parse(
+      "http://api.geonames.org/searchJSON?country=$countryCode&adminCode1=$regionCode&maxRows=50&featureClass=P&username=munirahi"));
+
+  if (response.statusCode == 200) {
+    final data = json.decode(response.body);
+    final List geonames = data['geonames'] ?? [];
+    print("API Response: $data"); // Debugging
+    print("Cities found: ${geonames.length}");
+
+    setState(() {
+      // Ensure you're correctly extracting the city names as a List<String>
+      cities = geonames.map((city) {
+        // Extract the city name and cast to String
+        return city['name']?.toString() ?? 'Unknown';
+      }).toList();
+    });
+  } else {
+    print("❌ Error fetching cities: ${response.statusCode}");
+    print("Response body: ${response.body}");
+  }
+}
+
+
+
+
+Widget _buildCountryPicker() {
+  return Padding(
+    padding: EdgeInsets.only(bottom: 16),
+    child: TextFormField(
+      readOnly: true,
+      decoration: InputDecoration(
+        labelText: "Select Country",
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        suffixIcon: Icon(Icons.arrow_drop_down),
+      ),
+      controller: TextEditingController(text: country),
+      onTap: () {
+        showCountryPicker(
+          context: context,
+          showPhoneCode: false,
+          onSelect: (Country selectedCountry) {
+            setState(() {
+              country = selectedCountry.name;
+              countrycode = selectedCountry.countryCode.toLowerCase();
+              region = ""; // Reset region
+              city = ""; // Reset city
+              fetchRegions(countrycode); // ✅ Fetch regions after selecting a country
+            });
+          },
+        );
+      },
+    ),
+  );
+}
+Widget _buildRegionPicker() {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 16),
+      child: DropdownButtonFormField<String>(
+        decoration: InputDecoration(
+          labelText: "Select Region",
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        value: region.isNotEmpty ? region : null,
+        items: regions.map((String region) {
+          return DropdownMenuItem<String>(
+            value: region,
+            child: Text(region),
+          );
+        }).toList(),
+       onChanged:(String? selectedRegion) {
+      setState(() {
+      region = selectedRegion!;
+      fetchCities(region, country); // 🔥 Trigger city fetch
+        });
+      },
+      ),
+    );
+  }
+ // City Picker
+  Widget _buildCityPicker() {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 16),
+      child: DropdownButtonFormField<String>(
+        decoration: InputDecoration(
+          labelText: "Select City",
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        value: city.isNotEmpty ? city : null,
+        items: cities.map((String city) {
+          return DropdownMenuItem<String>(
+            value: city,
+            child: Text(city),
+          );
+        }).toList(),
+        onChanged: (value) {
+          setState(() {
+            city = value!;
+          });
+        },
+      ),
+    );
+  }
+
 
   // Controller: Handles Business Logic
   Future<void> saveAddress(Address address) async {
@@ -63,11 +237,10 @@ class _AddAddressPageState extends State<AddAddressPage> {
   // Form Variables
   String title = "";
   String phoneNumber = "";
-  String region = "";
-  String city = "";
   String street = "";
   String postalCode = "";
   String full_Address = "";
+  
 
   @override
   Widget build(BuildContext context) {
@@ -87,8 +260,12 @@ class _AddAddressPageState extends State<AddAddressPage> {
             children: [
               _buildTextField("Title", "Enter title", (value) => title = value),
               _buildTextField("Phone Number", "+966", (value) => phoneNumber = value, keyboardType: TextInputType.phone),
-              _buildDropdownField("Select Region", ["Riyadh", "Jeddah", "Dammam"], (value) => region = value),
-              _buildDropdownField("Select City", ["City A", "City B", "City C"], (value) => city = value),
+              //_buildDropdownField("Select country", ["r", "e", "q"], (value) => country = value),
+              //_buildDropdownField("Select Region", ["Riyadh", "Jeddah", "Dammam"], (value) => region = value),
+              //_buildDropdownField("Select City", ["City A", "City B", "City C"], (value) => city = value),
+              _buildCountryPicker(),
+              _buildRegionPicker(),
+              _buildCityPicker(),
               _buildTextField("Street Address", "Enter street address", (value) => street = value),
               _buildTextField("Full Address", "Enter full address with building number", (value) => full_Address = value),
               _buildTextField("Postal Code", "Enter postal code", (value) => postalCode = value, keyboardType: TextInputType.number),
@@ -163,6 +340,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
               street: street,
               postalCode: postalCode,
               full_Address: full_Address,
+              country:country,
             );
             saveAddress(newAddress);
           }
