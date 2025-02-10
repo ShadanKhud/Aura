@@ -5,6 +5,7 @@ import 'package:aura_app/Settings/editInformation.dart';
 import 'package:aura_app/Sign_up_in/login.dart';
 import 'package:aura_app/Settings/changePassword/oldPassword.dart';
 import 'package:aura_app/Settings/ShippingAddresses/MyShippingAddresses.dart';
+import 'package:aura_app/Settings//MyCreditCards/MyCreditCards.dart';
 
 class SettingsPage extends StatelessWidget {
   @override
@@ -125,7 +126,14 @@ class SettingsPage extends StatelessWidget {
                       ),
                   _buildListTile(Icons.credit_card, "My Credit Cards",
                       color: const Color.fromARGB(255, 111, 111, 112),
-                      textColor: Color.fromARGB(255, 111, 111, 112)),
+                      textColor: Color.fromARGB(255, 111, 111, 112),
+                      onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => CreditCardsPage()),
+                    );
+                  }),
                   _buildListTile(Icons.group, "Manage Members",
                       color: const Color.fromARGB(255, 111, 111, 112),
                       textColor: Color.fromARGB(255, 111, 111, 112)),

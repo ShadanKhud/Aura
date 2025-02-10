@@ -190,7 +190,8 @@ Widget _buildRegionPicker() {
        onChanged:(String? selectedRegion) {
       setState(() {
       region = selectedRegion!;
-      fetchCities(region, country); // 🔥 Trigger city fetch
+       city = ""; // Reset city selection
+      fetchCities(region, countrycode); // 🔥 Trigger city fetch
         });
       },
       ),
@@ -252,32 +253,29 @@ Widget _buildRegionPicker() {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: Padding(
-        padding: EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              _buildTextField("Title", "Enter title", (value) => title = value),
-              _buildTextField("Phone Number", "+966", (value) => phoneNumber = value, keyboardType: TextInputType.phone),
-              //_buildDropdownField("Select country", ["r", "e", "q"], (value) => country = value),
-              //_buildDropdownField("Select Region", ["Riyadh", "Jeddah", "Dammam"], (value) => region = value),
-              //_buildDropdownField("Select City", ["City A", "City B", "City C"], (value) => city = value),
-              _buildCountryPicker(),
-              _buildRegionPicker(),
-              _buildCityPicker(),
-              _buildTextField("Street Address", "Enter street address", (value) => street = value),
-              _buildTextField("Full Address", "Enter full address with building number", (value) => full_Address = value),
-              _buildTextField("Postal Code", "Enter postal code", (value) => postalCode = value, keyboardType: TextInputType.number),
-              Spacer(),
-              _buildSaveButton(),
-            ],
-          ),
+      body:SingleChildScrollView(
+      padding: EdgeInsets.all(16), // Keeps padding around content
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start, // Align fields properly
+          children: [
+            _buildTextField("Title", "Enter title", (value) => title = value),
+            _buildTextField("Phone Number", "+966", (value) => phoneNumber = value, keyboardType: TextInputType.phone),
+            _buildCountryPicker(),
+            _buildRegionPicker(),
+            _buildCityPicker(),
+            _buildTextField("Street Address", "Enter street address", (value) => street = value),
+            _buildTextField("Full Address", "Enter full address with building number", (value) => full_Address = value),
+            _buildTextField("Postal Code", "Enter postal code", (value) => postalCode = value, keyboardType: TextInputType.number),
+            SizedBox(height: 20), // Add spacing before button
+            _buildSaveButton(),
+          ],
         ),
       ),
-    );
-  }
-
+    ),
+  );
+}
   // View: UI Components
   Widget _buildTextField(String label, String hint, Function(String) onSaved, {TextInputType keyboardType = TextInputType.text}) {
     return Padding(
