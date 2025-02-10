@@ -6,6 +6,7 @@ import 'package:aura_app/Sign_up_in/login.dart';
 import 'package:aura_app/Settings/changePassword/oldPassword.dart';
 import 'package:aura_app/Settings/ShippingAddresses/MyShippingAddresses.dart';
 import 'package:aura_app/Settings//MyCreditCards/MyCreditCards.dart';
+import 'package:aura_app/Settings/manageMembers/manage_members2.dart';
 
 class SettingsPage extends StatelessWidget {
   @override
@@ -122,8 +123,7 @@ class SettingsPage extends StatelessWidget {
                       MaterialPageRoute(
                           builder: (context) => ShippingAddressesScreen()),
                     );
-                  }
-                      ),
+                  }),
                   _buildListTile(Icons.credit_card, "My Credit Cards",
                       color: const Color.fromARGB(255, 111, 111, 112),
                       textColor: Color.fromARGB(255, 111, 111, 112),
@@ -134,9 +134,19 @@ class SettingsPage extends StatelessWidget {
                           builder: (context) => CreditCardsPage()),
                     );
                   }),
-                  _buildListTile(Icons.group, "Manage Members",
-                      color: const Color.fromARGB(255, 111, 111, 112),
-                      textColor: Color.fromARGB(255, 111, 111, 112)),
+                  _buildListTile(
+                    Icons.group,
+                    "Manage Members",
+                    color: const Color.fromARGB(255, 111, 111, 112),
+                    textColor: const Color.fromARGB(255, 111, 111, 112),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => ManageMembersPage2()),
+                      );
+                    },
+                  ),
                   _buildListTile(Icons.delete, "Delete Account",
                       color: const Color.fromARGB(255, 252, 82, 82),
                       textColor: const Color.fromARGB(255, 252, 82, 82)),

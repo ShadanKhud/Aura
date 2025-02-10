@@ -12,6 +12,14 @@ class ManageMembersPage extends StatefulWidget {
 class _ManageMembersPageState extends State<ManageMembersPage> {
   String? userEmail = FirebaseAuth.instance.currentUser?.email;
 
+  String _getAvatarPath(String avatar) {
+    final match = RegExp(r'Avatar (\d+)').firstMatch(avatar);
+    if (match != null) {
+      return 'assets/avatar${match.group(1)}.png';
+    }
+    return 'assets/avatar1.png';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -52,7 +60,7 @@ class _ManageMembersPageState extends State<ManageMembersPage> {
                     }
 
                     var members = snapshot.data!.docs;
-                    bool canAddMore = members.length < 9; // Max 9 members
+                    bool canAddMore = members.length < 9;
 
                     return Padding(
                       padding: const EdgeInsets.all(16.0),
@@ -70,8 +78,6 @@ class _ManageMembersPageState extends State<ManageMembersPage> {
                             style: TextStyle(color: Colors.grey),
                           ),
                           const SizedBox(height: 20),
-
-                          // Expanded GridView to prevent overflow
                           Expanded(
                             child: members.isNotEmpty
                                 ? GridView.builder(
@@ -87,44 +93,21 @@ class _ManageMembersPageState extends State<ManageMembersPage> {
                                     itemBuilder: (context, index) {
                                       var member = members[index].data()
                                           as Map<String, dynamic>;
-
+                                      String avatar = _getAvatarPath(
+                                          member['avatar'] ?? '');
                                       return Column(
                                         children: [
                                           Stack(
                                             alignment: Alignment.center,
                                             children: [
-                                              CircleAvatar(
-                                                radius: 40,
-                                                backgroundColor:
-                                                    Colors.grey[300],
-                                                child: Text(
-                                                  member['name'][0],
-                                                  style: const TextStyle(
-                                                      fontSize: 24,
-                                                      fontWeight:
-                                                          FontWeight.bold),
-                                                ),
-                                              ),
-                                              Positioned(
-                                                top: 0,
-                                                left: 0,
-                                                child: Container(
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                      horizontal: 6,
-                                                      vertical: 2),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.green,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            10),
-                                                  ),
-                                                  child: const Text(
-                                                    "Active",
-                                                    style: TextStyle(
-                                                        fontSize: 10,
-                                                        color: Colors.white),
-                                                  ),
+                                              ClipRRect(
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                                child: Image.asset(
+                                                  avatar,
+                                                  height: 70,
+                                                  width: 70,
+                                                  fit: BoxFit.cover,
                                                 ),
                                               ),
                                               Positioned(
@@ -158,10 +141,7 @@ class _ManageMembersPageState extends State<ManageMembersPage> {
                                 : const Center(
                                     child: Text("No members added yet")),
                           ),
-
                           const SizedBox(height: 20),
-
-                          // Add New Member Button (Disabled if 9 members exist)
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
@@ -183,7 +163,7 @@ class _ManageMembersPageState extends State<ManageMembersPage> {
                                             builder: (context) => addMembers()),
                                       );
                                     }
-                                  : null, // Disable button when max members reached
+                                  : null,
                               child: const Text(
                                 'Add New Member',
                                 style: TextStyle(
@@ -191,10 +171,7 @@ class _ManageMembersPageState extends State<ManageMembersPage> {
                               ),
                             ),
                           ),
-
                           const SizedBox(height: 10),
-
-                          // "I'm done" Button (Navigates to PlaceholderPage)
                           SizedBox(
                             width: double.infinity,
                             child: OutlinedButton(
@@ -204,8 +181,8 @@ class _ManageMembersPageState extends State<ManageMembersPage> {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8.0),
                                 ),
-                                side: const BorderSide(
-                                    color: Color(0xFF614FE0)), // Purple border
+                                side:
+                                    const BorderSide(color: Color(0xFF614FE0)),
                               ),
                               onPressed: () {
                                 Navigator.pushReplacement(
@@ -217,8 +194,7 @@ class _ManageMembersPageState extends State<ManageMembersPage> {
                               child: const Text(
                                 "I'm done with adding members",
                                 style: TextStyle(
-                                    fontSize: 16,
-                                    color: Color(0xFF614FE0)), // Purple text
+                                    fontSize: 16, color: Color(0xFF614FE0)),
                               ),
                             ),
                           ),
