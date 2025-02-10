@@ -17,11 +17,6 @@ class SettingsPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(
           0xFF614FE0), // Background color to contrast with the rounded section
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF614FE0),
-        elevation: 0,
-        title: Text(""),
-      ),
       body: Column(
         children: [
           /// Profile Header Section

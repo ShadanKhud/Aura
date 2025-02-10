@@ -16,7 +16,7 @@ class AddAddressPage extends StatefulWidget {
 
 // Model: Represents Address Data
 class Address {
-  String customerId; 
+  String customerId;
   String title;
   String phoneNumber;
   String region;
@@ -78,7 +78,7 @@ Map<String, String> regionCodeMap = {};
       });
     }
   }
- 
+
   // ✅ Fetch Regions (States) from GeoNames
 Future<void> fetchRegions(String countryCode) async {
     print("Fetching regions for: $countryCode");
@@ -241,7 +241,7 @@ Widget _buildRegionPicker() {
   String street = "";
   String postalCode = "";
   String full_Address = "";
-  
+
 
   @override
   Widget build(BuildContext context) {
@@ -277,12 +277,13 @@ Widget _buildRegionPicker() {
   );
 }
   // View: UI Components
-  Widget _buildTextField(String label, String hint, Function(String) onSaved, {TextInputType keyboardType = TextInputType.text}) {
+  Widget _buildTextField(String label, String hint, Function(String) onSaved,
+      {TextInputType keyboardType = TextInputType.text}) {
     return Padding(
       padding: EdgeInsets.only(bottom: 16),
       child: TextFormField(
         decoration: InputDecoration(
-          labelText: label,
+          label: _buildLabelWithAsterisk(label, true), // Add asterisk
           hintText: hint,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         ),
@@ -293,25 +294,75 @@ Widget _buildRegionPicker() {
     );
   }
 
-  Widget _buildDropdownField(String label, List<String> items, Function(String) onSaved) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 16),
-      child: DropdownButtonFormField<String>(
-        decoration: InputDecoration(
-          labelText: label,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+  Widget _buildDropdownPicker(String label, VoidCallback onTap, {bool isRequired = true}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              label,
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+            if (isRequired)
+              Text(
+                " *",
+                style: TextStyle(fontSize: 16, color: Colors.red),
+              ),
+          ],
         ),
-        items: items.map((String item) {
-          return DropdownMenuItem<String>(
-            value: item,
-            child: Text(item),
-          );
-        }).toList(),
-        validator: (value) => value == null || value.isEmpty ? "Required" : null,
-        onChanged: (value) {
-          if (value != null) onSaved(value);
-        },
-      ),
+        SizedBox(height: 8),
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade400),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  // Show the selected value or placeholder text
+                  label == "Select Country" && country.isNotEmpty
+                      ? country
+                      : label == "Select Region" && region.isNotEmpty
+                      ? region
+                      : label == "Select City" && city.isNotEmpty
+                      ? city
+                      : "Select $label",
+                  style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
+                ),
+                Icon(Icons.arrow_drop_down),
+              ],
+            ),
+          ),
+        ),
+        SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _buildLabelWithAsterisk(String label, bool isMandatory) {
+    return Row(
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.w500,
+            color: Colors.black,
+          ),
+        ),
+        if (isMandatory)
+          const Text(
+            " *",
+            style: TextStyle(
+              color: Color(0xFFEE4D4D), // Red Asterisk
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+      ],
     );
   }
 
