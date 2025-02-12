@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:aura_app/Settings/ShippingAddresses/newAddres.dart';
+import 'package:aura_app/Settings/ShippingAddresses/EditAddressPage.dart';
+
 
 class ShippingAddressesScreen extends StatelessWidget {
   final String userId = FirebaseAuth.instance.currentUser!.uid;
@@ -22,15 +24,16 @@ class ShippingAddressesScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => AddAddressPage(customerId: userId)),
+                    builder: (context) => AddAddressPage(customerId: userId),
+                  ),
                 );
               },
               style: OutlinedButton.styleFrom(
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12), // Rounded corners
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                side: BorderSide(color: Colors.grey.shade400), // Border color
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12), // Padding
+                side: BorderSide(color: Colors.grey.shade400),
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               ),
               child: Text(
                 "Add new address",
@@ -72,7 +75,11 @@ class ShippingAddressesScreen extends StatelessWidget {
                       full_Address: doc['full_Address'],
                       country: doc['country'],
                     );
-                    return AddressCard(address);
+                    // Pass the document ID to AddressCard
+                    return AddressCard(
+                      address,
+                      documentId: doc.id, // Pass the document ID
+                    );
                   },
                 );
               },
@@ -109,38 +116,106 @@ Future<List<Address>> fetchAddresses(String customerId) async {
 
 class AddressCard extends StatelessWidget {
   final Address address;
+  final String documentId;
 
-  AddressCard(this.address);
+  AddressCard(this.address, {required this.documentId});
 
   @override
   Widget build(BuildContext context) {
     return Card(
       margin: EdgeInsets.symmetric(vertical: 8),
-      color: Colors.purple.shade50,
+      color: Color(0xFFEFEDFB),//(239,237,251,255),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(address.title, style: TextStyle(fontWeight: FontWeight.bold)),
-            SizedBox(height: 4),
-            Text("full_Address: ${address.full_Address}"),
-            Text("City: ${address.city}"),
-            Text("Street: ${address.street}"),
-            Text("Region: ${address.region}"),
-            Text("Postal Code: ${address.postalCode}"),
-            Text("Phone: ${address.phoneNumber}"),
-            Text("country: ${address.country}"),
-
+            // Title
+            Text(
+              address.title,
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 16,
+              ),
+            ),
             SizedBox(height: 8),
+            
+            // Combined address text
+            Text(
+              "${address.street}, ${address.city},",
+              style: TextStyle(
+                color: Colors.grey[800],
+                fontSize: 14,
+              ),
+            ),
+            Text(
+              "${address.country}. Postal Code ${address.postalCode}",
+              style: TextStyle(
+                color: Colors.grey[800],
+                fontSize: 14,
+              ),
+            ),
+            
+            // Phone number
+            Text(
+              address.phoneNumber,
+              style: TextStyle(
+                color: Colors.grey[800],
+                fontSize: 14,
+              ),
+            ),
+            
+            // Divider
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Divider(
+                height: 1,
+                color: Colors.grey[300],
+              ),
+            ),
+            
+            // Edit button
             Align(
-              alignment: Alignment.centerRight,
+              alignment: Alignment.center,
               child: TextButton(
                 onPressed: () {
-                  // Add edit functionality here
+                  Map<String, dynamic> addressData = {
+                    'customerId': address.customerId,
+                    'title': address.title,
+                    'phoneNumber': address.phoneNumber,
+                    'region': address.region,
+                    'city': address.city,
+                    'street': address.street,
+                    'postalCode': address.postalCode,
+                    'full_Address': address.full_Address,
+                    'country': address.country,
+                  };
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => EditAddressPage(
+                        customerId: address.customerId,
+                        addressId: documentId,
+                        addressData: addressData,
+                      ),
+                    ),
+                  );
                 },
-                child: Text("EDIT", style: TextStyle(color: Colors.blue)),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size(0, 0),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  "EDIT",
+                  style: TextStyle(//rgba(239,237,251,255)Color(0xFF614FE0)
+                    color: Color(0xFF614FE0),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
             ),
           ],
