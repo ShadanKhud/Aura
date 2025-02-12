@@ -37,6 +37,8 @@ dependencies:
   collection: ^1.19.0
   share_plus: ^10.1.4
   win32: ^5.5.3
+  flutter_stripe: ^11.4.0
+
 
 
 
@@ -86,6 +88,7 @@ flutter:
   - assets/avatar9.png
   - assets/Visa-Logo.png
   - assets/Mastercard-logo.svg.png
+  
 
   #   - images/a_dot_ham.jpeg
 

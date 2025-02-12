@@ -90,7 +90,7 @@ class CreditCardsPage extends StatelessWidget {
   String _getCardLogo(String type) {
     switch (type) {
       case 'Mastercard': return 'assets/Mastercard-logo.svg.png';
-      case 'Visa': return 'assets/visa.png';
+      case 'Visa': return 'assets/Visa-Logo.png';
       default: return 'assets/Visa-Logo.png';
     }
   }
