@@ -62,6 +62,7 @@ String countrycode ="";
   List<String> countries = [];
   List<String> regions = [];
   List<String> cities = [];
+  
 Map<String, String> regionCodeMap = {};
   @override
   void initState() {
@@ -140,8 +141,16 @@ Future<void> fetchRegions(String countryCode) async {
   }
 }
 
-
-
+ final Map<String, String> countryDialCodes = {
+    'sa': '+966',
+    'us': '+1',
+    'eg': '+20',
+    'uk': '+44',
+    'de': '+49',
+  };
+  String _getDialCodeHint() {
+    return countryDialCodes[countrycode.toLowerCase()] ?? '+';
+  }
 
 Widget _buildCountryPicker() {
   return Padding(
@@ -149,10 +158,17 @@ Widget _buildCountryPicker() {
     child: TextFormField(
       readOnly: true,
       decoration: InputDecoration(
-        labelText: "Select Country",
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        label: _buildLabelWithAsterisk("Country", true),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        focusedBorder: OutlineInputBorder( // Only change border color when focused
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Color(0xFF614FE0)),
+        ),
         suffixIcon: Icon(Icons.arrow_drop_down),
       ),
+      validator: (value) => value!.isEmpty ? "Please select a country" : null,
       controller: TextEditingController(text: country),
       onTap: () {
         showCountryPicker(
@@ -162,9 +178,9 @@ Widget _buildCountryPicker() {
             setState(() {
               country = selectedCountry.name;
               countrycode = selectedCountry.countryCode.toLowerCase();
-              region = ""; // Reset region
-              city = ""; // Reset city
-              fetchRegions(countrycode); // ✅ Fetch regions after selecting a country
+              region = "";
+              city = "";
+              fetchRegions(countrycode);
             });
           },
         );
@@ -172,55 +188,70 @@ Widget _buildCountryPicker() {
     ),
   );
 }
+
 Widget _buildRegionPicker() {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 16),
-      child: DropdownButtonFormField<String>(
-        decoration: InputDecoration(
-          labelText: "Select Region",
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+  return Padding(
+    padding: EdgeInsets.only(bottom: 16),
+    child: DropdownButtonFormField<String>(
+      decoration: InputDecoration(
+        label: _buildLabelWithAsterisk("Region", true),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
         ),
-        value: region.isNotEmpty ? region : null,
-        items: regions.map((String region) {
-          return DropdownMenuItem<String>(
-            value: region,
-            child: Text(region),
-          );
-        }).toList(),
-       onChanged:(String? selectedRegion) {
-      setState(() {
-      region = selectedRegion!;
-       city = ""; // Reset city selection
-      fetchCities(region, countrycode); // 🔥 Trigger city fetch
+        focusedBorder: OutlineInputBorder( // Only change border color when focused
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Color(0xFF614FE0)),
+        ),
+      ),
+      value: region.isNotEmpty ? region : null,
+      items: regions.map((String region) {
+        return DropdownMenuItem<String>(
+          value: region,
+          child: Text(region),
+        );
+      }).toList(),
+      validator: (value) => value == null ? "Please select a region" : null,
+      onChanged: (String? selectedRegion) {
+        setState(() {
+          region = selectedRegion!;
+          city = "";
+          fetchCities(region, countrycode);
         });
       },
-      ),
-    );
-  }
- // City Picker
-  Widget _buildCityPicker() {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 16),
-      child: DropdownButtonFormField<String>(
-        decoration: InputDecoration(
-          labelText: "Select City",
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+    ),
+  );
+}
+
+Widget _buildCityPicker() {
+  return Padding(
+    padding: EdgeInsets.only(bottom: 16),
+    child: DropdownButtonFormField<String>(
+      decoration: InputDecoration(
+        label: _buildLabelWithAsterisk("City", true),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
         ),
-        value: city.isNotEmpty ? city : null,
-        items: cities.map((String city) {
-          return DropdownMenuItem<String>(
-            value: city,
-            child: Text(city),
-          );
-        }).toList(),
-        onChanged: (value) {
-          setState(() {
-            city = value!;
-          });
-        },
+        focusedBorder: OutlineInputBorder( // Only change border color when focused
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Color(0xFF614FE0)),
+        ),
       ),
-    );
-  }
+      value: city.isNotEmpty ? city : null,
+      items: cities.map((String city) {
+        return DropdownMenuItem<String>(
+          value: city,
+          child: Text(city),
+        );
+      }).toList(),
+      validator: (value) => value == null ? "Please select a city" : null,
+      onChanged: (value) {
+        setState(() {
+          city = value!;
+        });
+      },
+    ),
+  );
+}
 
 
   // Controller: Handles Business Logic
@@ -260,11 +291,11 @@ Widget _buildRegionPicker() {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start, // Align fields properly
           children: [
-            _buildTextField("Title", "Enter title", (value) => title = value),
-            _buildTextField("Phone Number", "+966", (value) => phoneNumber = value, keyboardType: TextInputType.phone),
+            _buildTextField("Title", "Enter title,home office etc.", (value) => title = value),
             _buildCountryPicker(),
             _buildRegionPicker(),
             _buildCityPicker(),
+            _buildTextField("Phone Number", "Use Country code as +966..", (value) => phoneNumber = value, keyboardType: TextInputType.phone),
             _buildTextField("Street Address", "Enter street address", (value) => street = value),
             _buildTextField("Full Address", "Enter full address with building number", (value) => full_Address = value),
             _buildTextField("Postal Code", "Enter postal code", (value) => postalCode = value, keyboardType: TextInputType.number),
@@ -277,22 +308,28 @@ Widget _buildRegionPicker() {
   );
 }
   // View: UI Components
-  Widget _buildTextField(String label, String hint, Function(String) onSaved,
-      {TextInputType keyboardType = TextInputType.text}) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 16),
-      child: TextFormField(
-        decoration: InputDecoration(
-          label: _buildLabelWithAsterisk(label, true), // Add asterisk
-          hintText: hint,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+Widget _buildTextField(String label, String hint, Function(String) onSaved,
+    {TextInputType keyboardType = TextInputType.text}) {
+  return Padding(
+    padding: EdgeInsets.only(bottom: 16),
+    child: TextFormField(
+      decoration: InputDecoration(
+        label: _buildLabelWithAsterisk(label, true),
+        hintText: hint,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
         ),
-        keyboardType: keyboardType,
-        validator: (value) => value!.isEmpty ? "Required" : null,
-        onSaved: (value) => onSaved(value!),
+        focusedBorder: OutlineInputBorder( // Only change border color when focused
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Color(0xFF614FE0)),
+        ),
       ),
-    );
-  }
+      keyboardType: keyboardType,
+      validator: (value) => value!.isEmpty ? "Required" : null,
+      onSaved: (value) => onSaved(value!),
+    ),
+  );
+}
 
   Widget _buildDropdownPicker(String label, VoidCallback onTap, {bool isRequired = true}) {
     return Column(
