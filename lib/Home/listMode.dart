@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:aura_app/Settings/settings.dart';
 import 'package:aura_app/wishlist/wishlist.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ProductsPage extends StatefulWidget {
   const ProductsPage({super.key});
@@ -94,6 +95,43 @@ class _ProductsPageState extends State<ProductsPage> {
     });
   }
 
+  // Function to handle adding product to wishlist
+  Future<void> _addToWishlist(DocumentSnapshot productSnapshot) async {
+    try {
+      // Get the current user ID
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) return; // Make sure the user is authenticated
+
+      String userId = user.uid;
+
+      // Use the product's document ID as the productId
+      String productId = productSnapshot.id;
+
+      // Add the product to the user's wishlist in Firestore
+      await FirebaseFirestore.instance
+          .collection('customers') // Collection where user's wishlist is stored
+          .doc(userId) // Document for the current user
+          .collection('wishlist') // Subcollection for the wishlist
+          .doc(productId) // Use productId as the document ID
+          .set({
+        'productId': productId,
+        'addedAt':
+            FieldValue.serverTimestamp(), // Add timestamp when product is added
+      });
+
+      // Show confirmation to the user
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Product added to your wishlist!'),
+      ));
+    } catch (e) {
+      print("Error adding product to wishlist: $e");
+      // Show error message if something goes wrong
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Error adding product to wishlist.'),
+      ));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -130,6 +168,8 @@ class _ProductsPageState extends State<ProductsPage> {
                             itemBuilder: (context, index) {
                               var product = _productsSnapshot.docs[index].data()
                                   as Map<String, dynamic>;
+                              var productSnapshot =
+                                  _productsSnapshot.docs[index];
 
                               // Ensure product contains necessary data
                               if (product['images'] == null ||
@@ -142,6 +182,8 @@ class _ProductsPageState extends State<ProductsPage> {
                               return ProductCard(
                                 product: product,
                                 onTap: () => _selectProduct(product),
+                                onHeartPressed: () => _addToWishlist(
+                                    productSnapshot), // Add to wishlist
                               );
                             },
                           )
@@ -243,8 +285,14 @@ class _ProductsPageState extends State<ProductsPage> {
 class ProductCard extends StatelessWidget {
   final Map<String, dynamic> product;
   final VoidCallback onTap;
+  final VoidCallback onHeartPressed;
 
-  const ProductCard({super.key, required this.product, required this.onTap});
+  const ProductCard({
+    super.key,
+    required this.product,
+    required this.onTap,
+    required this.onHeartPressed,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -290,18 +338,12 @@ class ProductCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '${product['price'] ?? 'N/A'} SAR',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
+                        Text(
+                          '${product['price'] ?? 'N/A'} SAR',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
                         ),
                       ],
                     ),
@@ -316,7 +358,7 @@ class ProductCard extends StatelessWidget {
                     Icons.favorite_border,
                     color: Colors.grey,
                   ),
-                  onPressed: () {},
+                  onPressed: onHeartPressed,
                 ),
               ),
             ],
@@ -324,8 +366,8 @@ class ProductCard extends StatelessWidget {
         ),
       );
     } catch (e) {
-      print('Error parsing product data: $e');
-      return const Center(child: Text('Error loading product'));
+      print('Error rendering product card: $e');
+      return const Center(child: Text('Error rendering product'));
     }
   }
 }
