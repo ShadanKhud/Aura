@@ -201,44 +201,70 @@ class _ManageMembersPageState extends State<ManageMembersPage> {
                             ),
                           ),
                           const SizedBox(height: 20),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Color(0xFF614FE0),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8.0)),
+                          Column(
+                            children: [
+                              const SizedBox(height: 40),
+                              // Add New Member Button
+                              ElevatedButton(
+                                onPressed: canAddMore
+                                    ? () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (context) =>
+                                                  addMembers()),
+                                        )
+                                    : null,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF614FE0),
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 16.0),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8.0),
+                                  ),
+                                ),
+                                child: const Center(
+                                  child: Text(
+                                    "Add New Member",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
                               ),
-                              onPressed: canAddMore
-                                  ? () => Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (context) => addMembers()),
-                                      )
-                                  : null,
-                              child: const Text("Add New Member",
-                                  style: TextStyle(
-                                      color: Colors.white, fontSize: 16)),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton(
-                              style: OutlinedButton.styleFrom(
-                                side: BorderSide(color: Color(0xFF614FE0)),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8.0)),
+                              const SizedBox(height: 10),
+                              // I'm Done with Adding Members Button
+                              ElevatedButton(
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => PlaceholderPage()),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  side: const BorderSide(
+                                    color: Color(0xFF614FE0),
+                                    width: 2,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 16.0),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8.0),
+                                  ),
+                                ),
+                                child: const Center(
+                                  child: Text(
+                                    "I'm Done with Adding Members",
+                                    style: TextStyle(
+                                      color: Color(0xFF614FE0),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
                               ),
-                              onPressed: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => PlaceholderPage()),
-                              ),
-                              child: const Text("I'm Done with Adding Members",
-                                  style: TextStyle(
-                                      color: Color(0xFF614FE0), fontSize: 16)),
-                            ),
+                            ],
                           ),
                         ],
                       ),
