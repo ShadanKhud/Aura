@@ -1,9 +1,10 @@
-import 'dart:convert'; // Add this import to use jsonDecode
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:aura_app/Home/listMode.dart'; // ProductsPage
-import 'package:aura_app/Settings/settings.dart'; // SettingsPage
+import 'package:aura_app/Home/listMode.dart';
+import 'package:aura_app/Settings/settings.dart';
+import 'package:aura_app/itemDetails/ItemDetailsPage.dart';
 
 class WishlistPage extends StatefulWidget {
   @override
@@ -19,7 +20,6 @@ class _WishlistPageState extends State<WishlistPage> {
     wishlistItems = fetchWishlistItems();
   }
 
-  /// Fetch wishlist items from Firestore
   Future<List<Map<String, dynamic>>> fetchWishlistItems() async {
     try {
       User? user = FirebaseAuth.instance.currentUser;
@@ -51,25 +51,20 @@ class _WishlistPageState extends State<WishlistPage> {
 
           // Handle image URLs properly
           String imagesString = productData['images'] ?? '[]';
-          imagesString = imagesString.replaceAll(
-              "'", '"'); // Replace single quotes with double quotes
-          List<String> imageUrls = List<String>.from(
-              jsonDecode(imagesString)); // Decode the JSON string to a List
+          imagesString =
+              imagesString.replaceAll("'", '"'); // Ensure correct JSON format
+          List<String> imageUrls = List<String>.from(jsonDecode(imagesString));
 
           // Handle price and remove "now" if present
           String price = productData['price'] ?? 'N/A';
-          price = price
-              .replaceAll("Now", "")
-              .trim(); // Remove "now" and trim any extra spaces
+          price = price.replaceAll("Now", "").trim();
 
           wishlistData.add({
             'docId': doc.id,
             'productId': productId,
             'name': productData['name'] ?? 'No name',
-            'price': price, // Updated price without "now"
-            'image': imageUrls.isNotEmpty
-                ? imageUrls[0]
-                : '', // Use the first image in the list
+            'price': price,
+            'image': imageUrls.isNotEmpty ? imageUrls[0] : '',
           });
         }
       }
@@ -81,7 +76,6 @@ class _WishlistPageState extends State<WishlistPage> {
     }
   }
 
-  /// Remove item from wishlist
   Future<void> removeFromWishlist(String docId) async {
     try {
       User? user = FirebaseAuth.instance.currentUser;
@@ -102,7 +96,6 @@ class _WishlistPageState extends State<WishlistPage> {
     }
   }
 
-  /// Function to shorten the product title (max 20 chars + "...")
   String truncateTitle(String title) {
     return title.length > 20 ? "${title.substring(0, 20)}..." : title;
   }
@@ -113,7 +106,6 @@ class _WishlistPageState extends State<WishlistPage> {
       backgroundColor: const Color(0xFF614FE0),
       body: Column(
         children: [
-          /// Header Section
           Container(
             color: const Color(0xFF614FE0),
             padding: EdgeInsets.all(20),
@@ -131,8 +123,6 @@ class _WishlistPageState extends State<WishlistPage> {
               ],
             ),
           ),
-
-          /// Wishlist Items
           Expanded(
             child: Container(
               decoration: BoxDecoration(
@@ -155,15 +145,12 @@ class _WishlistPageState extends State<WishlistPage> {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
-
                   if (snapshot.hasError) {
                     return Center(child: Text('Error: ${snapshot.error}'));
                   }
-
                   if (!snapshot.hasData || snapshot.data!.isEmpty) {
                     return const Center(child: Text('No items in wishlist.'));
                   }
-
                   var items = snapshot.data!;
 
                   return ListView.builder(
@@ -172,118 +159,139 @@ class _WishlistPageState extends State<WishlistPage> {
                     itemBuilder: (context, index) {
                       final item = items[index];
 
-                      return Card(
-                        color: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        margin:
-                            EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              /// First Column - Image
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
-                                child: Image.network(
-                                  item['image'],
-                                  height: 120,
-                                  width: 100,
-                                  fit: BoxFit.cover,
-                                  loadingBuilder:
-                                      (context, child, loadingProgress) {
-                                    if (loadingProgress == null) return child;
-                                    return Center(
-                                        child: CircularProgressIndicator());
-                                  },
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Center(
-                                        child:
-                                            Icon(Icons.broken_image, size: 50));
-                                  },
-                                ),
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ItemDetailsPage(
+                                itemDetails: item,
                               ),
-
-                              SizedBox(width: 10),
-
-                              /// Second Column - Title and Heart Icon
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
+                            ),
+                          );
+                        },
+                        child: Card(
+                          color: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          margin:
+                              EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                          elevation: 1,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: Colors.grey.withOpacity(0.2),
+                                width: 0.5,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: Image.network(
+                                      item['image'],
+                                      height: 120,
+                                      width: 100,
+                                      fit: BoxFit.cover,
+                                      loadingBuilder:
+                                          (context, child, loadingProgress) {
+                                        if (loadingProgress == null)
+                                          return child;
+                                        return Center(
+                                            child: CircularProgressIndicator());
+                                      },
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                        return Center(
+                                            child: Icon(Icons.broken_image,
+                                                size: 50));
+                                      },
+                                    ),
+                                  ),
+                                  SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          truncateTitle(item['name']),
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
-                                          ),
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              truncateTitle(item['name']),
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                            IconButton(
+                                              icon: Icon(Icons.favorite,
+                                                  color: Colors.red),
+                                              onPressed: () =>
+                                                  removeFromWishlist(
+                                                      item['docId']),
+                                            ),
+                                          ],
                                         ),
-                                        IconButton(
-                                          icon: Icon(Icons.favorite,
-                                              color: Colors.red),
-                                          onPressed: () =>
-                                              removeFromWishlist(item['docId']),
+                                        SizedBox(height: 10),
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              "\$${item['price']}",
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.black,
+                                              ),
+                                            ),
+                                            OutlinedButton(
+                                              onPressed: () {
+                                                // Move to cart functionality
+                                                // Call the function to move the item to the cart, for example:
+                                                // moveToCart(item['productId']);
+                                              },
+                                              style: OutlinedButton.styleFrom(
+                                                foregroundColor: Colors
+                                                    .black, // Text color (black)
+                                                side: const BorderSide(
+                                                  color: Colors
+                                                      .grey, // Border color (black)
+                                                ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          8.0), // Corner radius
+                                                ),
+                                                padding: const EdgeInsets
+                                                    .symmetric(
+                                                    vertical: 8.0,
+                                                    horizontal:
+                                                        12.0), // Adjust padding for smaller size
+                                              ),
+                                              child: const Text(
+                                                "Move to Cart",
+                                                style: TextStyle(
+                                                  fontSize:
+                                                      16, // Smaller font size (optional, adjust as needed)
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),
-                                    SizedBox(height: 10),
-
-                                    /// Third Column - Price + Move to Cart
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          "\$${item['price']}",
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.black,
-                                          ),
-                                        ),
-                                        OutlinedButton(
-                                          onPressed: () {
-                                            // Implement your 'move to cart' functionality here.
-                                          },
-                                          style: OutlinedButton.styleFrom(
-                                            foregroundColor: Colors
-                                                .black, // Text color (black)
-                                            side: const BorderSide(
-                                              color: Colors
-                                                  .black, // Border color (black)
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                      8.0), // Corner radius
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 8.0,
-                                                horizontal:
-                                                    12.0), // Adjust padding for smaller size
-                                          ),
-                                          child: const Text(
-                                            "Move to Cart",
-                                            style: TextStyle(
-                                              fontSize:
-                                                  16, // Smaller font size (optional, adjust as needed)
-                                              // fontWeight:
-                                              //     FontWeight.bold, // Bold text
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
                         ),
                       );
@@ -293,37 +301,6 @@ class _WishlistPageState extends State<WishlistPage> {
               ),
             ),
           ),
-        ],
-      ),
-
-      /// Bottom Navigation Bar
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color.fromARGB(255, 96, 95, 95),
-        unselectedItemColor: Colors.grey,
-        currentIndex: 3, // Wishlist tab index
-        onTap: (index) {
-          if (index == 0) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => ProductsPage()),
-            );
-          } else if (index == 4) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => SettingsPage()),
-            );
-          }
-        },
-        items: [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: "Search"),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.shopping_cart), label: "My Cart"),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.favorite), label: "Wishlist"),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.settings), label: "Settings"),
         ],
       ),
     );
