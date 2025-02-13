@@ -37,6 +37,66 @@ class ManageMembersPage2 extends StatelessWidget {
         .delete();
   }
 
+  void _showDeleteConfirmation(
+      BuildContext context, String customerId, String memberId, String name) {
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
+      ),
+      backgroundColor: Colors.white,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Delete Member?",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 10),
+              Text(
+                "Are you sure you want to delete $name? You will not be able to retrieve the member’s data.",
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey[300],
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8.0)),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child:
+                        Text("Cancel", style: TextStyle(color: Colors.black)),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8.0)),
+                    ),
+                    onPressed: () {
+                      _deleteMember(customerId, memberId);
+                      Navigator.pop(context);
+                    },
+                    child:
+                        Text("Delete", style: TextStyle(color: Colors.white)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   String _getAvatarPath(String avatar) {
     final match = RegExp(r'Avatar (\d+)').firstMatch(avatar);
     if (match != null) {
@@ -66,7 +126,18 @@ class ManageMembersPage2 extends StatelessWidget {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const Text(
+              "Members",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 5),
+            const Text(
+              "Shop based on everyone's preferences. Add up to 9 members and find clothes for them based on their style easily.",
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+            const SizedBox(height: 20),
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: _getMembersStream(),
@@ -118,8 +189,8 @@ class ManageMembersPage2 extends StatelessWidget {
                             child: IconButton(
                               icon: const Icon(Icons.close,
                                   color: Colors.red, size: 20),
-                              onPressed: () =>
-                                  _deleteMember(customerId, memberId),
+                              onPressed: () => _showDeleteConfirmation(
+                                  context, customerId, memberId, name),
                             ),
                           ),
                         ],

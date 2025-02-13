@@ -20,6 +20,75 @@ class _ManageMembersPageState extends State<ManageMembersPage> {
     return 'assets/avatar1.png';
   }
 
+  Future<void> _deleteMember(String customerId, String memberId) async {
+    await FirebaseFirestore.instance
+        .collection('customers')
+        .doc(customerId)
+        .collection('members')
+        .doc(memberId)
+        .delete();
+  }
+
+  void _showDeleteConfirmation(
+      BuildContext context, String customerId, String memberId, String name) {
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
+      ),
+      backgroundColor: Colors.white,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Delete Member?",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 10),
+              Text(
+                "Are you sure you want to delete $name? You will not be able to retrieve the member’s data.",
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey[300],
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8.0)),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child:
+                        Text("Cancel", style: TextStyle(color: Colors.black)),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8.0)),
+                    ),
+                    onPressed: () {
+                      _deleteMember(customerId, memberId);
+                      Navigator.pop(context);
+                    },
+                    child:
+                        Text("Delete", style: TextStyle(color: Colors.white)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -53,6 +122,7 @@ class _ManageMembersPageState extends State<ManageMembersPage> {
                       .collection('customers')
                       .doc(customerDocId)
                       .collection('members')
+                      .orderBy('createdAt', descending: true)
                       .snapshots(),
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) {
@@ -70,105 +140,85 @@ class _ManageMembersPageState extends State<ManageMembersPage> {
                           const Text(
                             "Members",
                             style: TextStyle(
-                                fontSize: 24, fontWeight: FontWeight.bold),
+                                fontSize: 16, fontWeight: FontWeight.bold),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 5),
                           const Text(
                             "Shop based on everyone's preferences. Add up to 9 members and find clothes for them based on their style easily.",
-                            style: TextStyle(color: Colors.grey),
+                            style: TextStyle(fontSize: 16, color: Colors.grey),
                           ),
                           const SizedBox(height: 20),
                           Expanded(
-                            child: members.isNotEmpty
-                                ? GridView.builder(
-                                    padding: const EdgeInsets.only(top: 10),
-                                    gridDelegate:
-                                        const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 3,
-                                      crossAxisSpacing: 20,
-                                      mainAxisSpacing: 20,
-                                      childAspectRatio: 1,
+                            child: GridView.builder(
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                crossAxisSpacing: 10,
+                                mainAxisSpacing: 10,
+                                childAspectRatio: 1,
+                              ),
+                              itemCount: members.length,
+                              itemBuilder: (context, index) {
+                                var member = members[index].data()
+                                    as Map<String, dynamic>;
+                                String avatar =
+                                    _getAvatarPath(member['avatar'] ?? '');
+                                return Stack(
+                                  children: [
+                                    Column(
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          child: Image.asset(avatar,
+                                              height: 70,
+                                              width: 70,
+                                              fit: BoxFit.cover),
+                                        ),
+                                        const SizedBox(height: 5),
+                                        Text(member['name'] ?? 'Unknown',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(fontSize: 14)),
+                                      ],
                                     ),
-                                    itemCount: members.length,
-                                    itemBuilder: (context, index) {
-                                      var member = members[index].data()
-                                          as Map<String, dynamic>;
-                                      String avatar = _getAvatarPath(
-                                          member['avatar'] ?? '');
-                                      return Column(
-                                        children: [
-                                          Stack(
-                                            alignment: Alignment.center,
-                                            children: [
-                                              ClipRRect(
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                                child: Image.asset(
-                                                  avatar,
-                                                  height: 70,
-                                                  width: 70,
-                                                  fit: BoxFit.cover,
-                                                ),
-                                              ),
-                                              Positioned(
-                                                top: -10,
-                                                right: -10,
-                                                child: IconButton(
-                                                  icon: const Icon(Icons.close,
-                                                      size: 20,
-                                                      color: Colors.red),
-                                                  onPressed: () async {
-                                                    await FirebaseFirestore
-                                                        .instance
-                                                        .collection('customers')
-                                                        .doc(customerDocId)
-                                                        .collection('members')
-                                                        .doc(members[index].id)
-                                                        .delete();
-                                                  },
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(member['name'],
-                                              style: const TextStyle(
-                                                  fontWeight: FontWeight.bold)),
-                                        ],
-                                      );
-                                    },
-                                  )
-                                : const Center(
-                                    child: Text("No members added yet")),
+                                    Positioned(
+                                      top: 0,
+                                      right: 0,
+                                      child: IconButton(
+                                        icon: const Icon(Icons.close,
+                                            color: Colors.red, size: 20),
+                                        onPressed: () =>
+                                            _showDeleteConfirmation(
+                                                context,
+                                                customerDocId,
+                                                members[index].id,
+                                                member['name']),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
                           ),
                           const SizedBox(height: 20),
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: canAddMore
-                                    ? const Color(0xFF614FE0)
-                                    : Colors.grey,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16.0),
+                                backgroundColor: Color(0xFF614FE0),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8.0),
-                                ),
+                                    borderRadius: BorderRadius.circular(8.0)),
                               ),
                               onPressed: canAddMore
-                                  ? () {
-                                      Navigator.push(
+                                  ? () => Navigator.push(
                                         context,
                                         MaterialPageRoute(
                                             builder: (context) => addMembers()),
-                                      );
-                                    }
+                                      )
                                   : null,
-                              child: const Text(
-                                'Add New Member',
-                                style: TextStyle(
-                                    fontSize: 16, color: Colors.white),
-                              ),
+                              child: const Text("Add New Member",
+                                  style: TextStyle(
+                                      color: Colors.white, fontSize: 16)),
                             ),
                           ),
                           const SizedBox(height: 10),
@@ -176,26 +226,18 @@ class _ManageMembersPageState extends State<ManageMembersPage> {
                             width: double.infinity,
                             child: OutlinedButton(
                               style: OutlinedButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16.0),
+                                side: BorderSide(color: Color(0xFF614FE0)),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8.0),
-                                ),
-                                side:
-                                    const BorderSide(color: Color(0xFF614FE0)),
+                                    borderRadius: BorderRadius.circular(8.0)),
                               ),
-                              onPressed: () {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) => PlaceholderPage()),
-                                );
-                              },
-                              child: const Text(
-                                "I'm done with adding members",
-                                style: TextStyle(
-                                    fontSize: 16, color: Color(0xFF614FE0)),
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => PlaceholderPage()),
                               ),
+                              child: const Text("I'm Done with Adding Members",
+                                  style: TextStyle(
+                                      color: Color(0xFF614FE0), fontSize: 16)),
                             ),
                           ),
                         ],
