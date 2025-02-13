@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:aura_app/Settings/MyCreditCards/AddCard.dart';
 
 class CreditCardsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return Scaffold(
+        appBar: AppBar(title: Text("My Credit Cards")),
+        body: Center(child: Text("Please log in to view your cards")),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text("My Credit Cards", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
@@ -34,7 +43,11 @@ class CreditCardsPage extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: StreamBuilder(
-                stream: FirebaseFirestore.instance.collection('cards').snapshots(),
+                stream: FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(user.uid)
+                    .collection('cards')
+                    .snapshots(),
                 builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
                   if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
                   return ListView(
@@ -63,7 +76,12 @@ class CreditCardsPage extends StatelessWidget {
                             ),
                             IconButton(
                               icon: Icon(Icons.delete, color: Colors.black54),
-                              onPressed: () => FirebaseFirestore.instance.collection('cards').doc(doc.id).delete(),
+                              onPressed: () => FirebaseFirestore.instance
+                                  .collection('users')
+                                  .doc(user.uid)
+                                  .collection('cards')
+                                  .doc(doc.id)
+                                  .delete(),
                             ),
                           ],
                         ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:crypto/crypto.dart'; // For hashing CVV
-import 'dart:convert'; // For utf8 encoding
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class AddCardPage extends StatefulWidget {
   @override
@@ -10,11 +10,15 @@ class AddCardPage extends StatefulWidget {
 
 class _AddCardPageState extends State<AddCardPage> {
   final _formKey = GlobalKey<FormState>();
-  String cardNumber = "", name = "", expDate = "", cvv = "", type = "Visa";
+  final TextEditingController _cardNumberController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _expDateController = TextEditingController();
+  final TextEditingController _cvvController = TextEditingController();
+  String cardType = "Visa";
 
-  // Function to validate card using Luhn Algorithm
+  // Validate Card Number using Luhn Algorithm
   bool _validateCardNumber(String number) {
-    number = number.replaceAll(RegExp(r"\s+"), ""); // Remove spaces
+    number = number.replaceAll(RegExp(r"\s+"), "");
     if (number.length < 13 || number.length > 19) return false;
 
     int sum = 0;
@@ -31,35 +35,72 @@ class _AddCardPageState extends State<AddCardPage> {
     return (sum % 10 == 0);
   }
 
-  // Function to hash the CVV
-  String _hashCVV(String cvv) {
-    var key = utf8.encode("secure_key"); // Replace with a more secure key
-    var bytes = utf8.encode(cvv);
-    var hmacSha256 = Hmac(sha256, key);
-    var digest = hmacSha256.convert(bytes);
-    return digest.toString();
-  }
-
-  void _saveCard() {
+  // Send card details to the backend server.js for Stripe
+  Future<void> _addPaymentMethod() async {
     if (_formKey.currentState!.validate()) {
-      if (!_validateCardNumber(cardNumber)) {
+      if (!_validateCardNumber(_cardNumberController.text)) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Invalid card number!"))
+          SnackBar(content: Text("Invalid card number!")),
         );
         return;
       }
 
-      FirebaseFirestore.instance.collection('cards').add({
-        'cardNumber': cardNumber,
-        'name': name,
-        'expDate': expDate,
-        'cvvToken': _hashCVV(cvv), // Store hashed CVV instead of raw
-        'type': type,
-        'last4': cardNumber.substring(cardNumber.length - 4),
-      });
+      try {
+        var response = await http.post(
+          Uri.parse('http//192.168.100.149:5000/add-card'),
+          headers: {"Content-Type": "application/json"},
+          body: jsonEncode({
+            'card_number': _cardNumberController.text.replaceAll(" ", ""),
+            'exp_date': _expDateController.text,
+            'cvv': _cvvController.text,
+            'name': _nameController.text,
+          }),
+        );
 
-      Navigator.pop(context);
+        var responseData = jsonDecode(response.body);
+        if (response.statusCode == 200) {
+          FirebaseFirestore.instance.collection('cards').add({
+            'cardNumber': _cardNumberController.text,
+            'name': _nameController.text,
+            'expDate': _expDateController.text,
+            'type': cardType,
+            'last4': _cardNumberController.text.substring(_cardNumberController.text.length - 4),
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Card added successfully!")),
+          );
+          Navigator.pop(context);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(responseData['error'] ?? "Error adding card.")),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: $e")),
+        );
+      }
     }
+  }
+
+  Widget _buildTextField(String label, String hint, TextEditingController controller,
+      {TextInputType keyboardType = TextInputType.text, bool obscureText = false, int? maxLength}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: keyboardType,
+        maxLength: maxLength,
+        obscureText: obscureText,
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hint,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+        validator: (value) => value == null || value.isEmpty ? "$label is required" : null,
+      ),
+    );
   }
 
   @override
@@ -78,58 +119,22 @@ class _AddCardPageState extends State<AddCardPage> {
           key: _formKey,
           child: Column(
             children: [
-              _buildTextField("Card Number *", "4111 1111 1111 1111", (value) => cardNumber = value, keyboardType: TextInputType.number, maxLength: 19),
-              _buildTextField("Name on card", "Enter the name written on the card", (value) => name = value),
-              _buildDateField("Expiration date *"),
-              _buildTextField("CVV *", "123", (value) => cvv = value, keyboardType: TextInputType.number, maxLength: 3),
+              _buildTextField("Card Number *", "4111 1111 1111 1111", _cardNumberController, keyboardType: TextInputType.number, maxLength: 19),
+              _buildTextField("Name on card", "Enter name on the card", _nameController),
+              _buildTextField("Expiration Date (MM/YY) *", "MM/YY", _expDateController, keyboardType: TextInputType.datetime, maxLength: 5),
+              _buildTextField("CVV *", "123", _cvvController, keyboardType: TextInputType.number, maxLength: 3, obscureText: true),
               SizedBox(height: 20),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF614FE0), padding: EdgeInsets.symmetric(vertical: 14, horizontal: 40)),
-                onPressed: _saveCard,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF614FE0),
+                  padding: EdgeInsets.symmetric(vertical: 14, horizontal: 40),
+                ),
+                onPressed: _addPaymentMethod,
                 child: Text("Save", style: TextStyle(fontSize: 18, color: Colors.white)),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildTextField(String label, String hint, Function(String) onChanged, {TextInputType keyboardType = TextInputType.text, int? maxLength}) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 12),
-      child: TextFormField(
-        decoration: InputDecoration(
-          labelText: label,
-          hintText: hint,
-          border: OutlineInputBorder(),
-        ),
-        keyboardType: keyboardType,
-        maxLength: maxLength,
-        validator: (value) => value == null || value.isEmpty ? "$label is required" : null,
-        onChanged: onChanged,
-      ),
-    );
-  }
-
-  Widget _buildDateField(String label) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 12),
-      child: TextFormField(
-        decoration: InputDecoration(
-          labelText: label,
-          border: OutlineInputBorder(),
-        ),
-        keyboardType: TextInputType.datetime,
-        validator: (value) => value == null || value.isEmpty ? "$label is required" : null,
-        onTap: () async {
-          DateTime? pickedDate = await showDatePicker(
-            context: context,
-            initialDate: DateTime.now(),
-            firstDate: DateTime.now(),
-            lastDate: DateTime(2100),
-          );
-        },
       ),
     );
   }
