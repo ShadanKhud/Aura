@@ -259,14 +259,20 @@ class _WishlistPageState extends State<WishlistPage> {
                                                   .black, // Border color (black)
                                             ),
                                             shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(
-                                                  8.0), // Just change the corner radius
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                      8.0), // Corner radius
                                             ),
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 8.0,
+                                                horizontal:
+                                                    12.0), // Adjust padding for smaller size
                                           ),
                                           child: const Text(
                                             "Move to Cart",
                                             style: TextStyle(
-                                              fontSize: 16, // Font size
+                                              fontSize:
+                                                  16, // Smaller font size (optional, adjust as needed)
                                               // fontWeight:
                                               //     FontWeight.bold, // Bold text
                                             ),
