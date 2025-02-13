@@ -28,6 +28,9 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
             ? List<String>.from(jsonDecode(item['images']))
             : [];
 
+    // Handle 'reviews' being null, default to an empty list
+    List reviews = item['reviews'] ?? [];
+
     return Scaffold(
       appBar: AppBar(
         title: Text(item['name'] ?? 'Item Details'),
@@ -131,14 +134,64 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                   );
                 },
                 child: Text("Add to Cart"),
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
+              // Description
               Text(
                 "Description",
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Text(item['description'] ?? 'No description available.'),
+              const SizedBox(height: 16),
+              // Ratings and Reviews
+              ExpansionTile(
+                title: Text("Ratings & Reviews"),
+                children: [
+                  ListTile(
+                    title: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text("Summary"),
+                        Text("${reviews.length} Reviews"),
+                      ],
+                    ),
+                  ),
+                  ListTile(
+                    title: DropdownButtonFormField<String>(
+                      value: sortOption,
+                      items: [
+                        "Recommended (default)",
+                        "Rating - High to low",
+                        "Rating - Low to high",
+                      ].map((option) {
+                        return DropdownMenuItem(
+                          value: option,
+                          child: Text(option),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          sortOption = value!;
+                        });
+                      },
+                    ),
+                  ),
+                  ...reviews.map<Widget>((review) {
+                    return ListTile(
+                      title: Text(review['reviewer_name'] ?? 'Anonymous'),
+                      subtitle: Text(review['comment'] ?? 'No comment'),
+                      trailing: Text("${review['rating']} ★"),
+                    );
+                  }).toList(),
+                ],
+              ),
             ],
           ),
         ),
