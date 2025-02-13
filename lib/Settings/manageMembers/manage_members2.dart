@@ -130,7 +130,7 @@ class ManageMembersPage2 extends StatelessWidget {
           children: [
             const Text(
               "Members",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 5),
             const Text(

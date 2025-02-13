@@ -140,7 +140,7 @@ class _ManageMembersPageState extends State<ManageMembersPage> {
                           const Text(
                             "Members",
                             style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
+                                fontSize: 24, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 5),
                           const Text(
