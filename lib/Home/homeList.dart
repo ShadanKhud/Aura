@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:aura_app/Settings/settings.dart';
+import 'listMode.dart';
 
 class HomeScreen extends StatelessWidget {
   @override
@@ -28,7 +29,10 @@ class HomeScreen extends StatelessWidget {
         currentIndex: 0, // home tab index
         onTap: (index) {
           if (index == 0) {
-            return;
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => ProductsPage()),
+            );
           } else if (index == 1) {
             //Navigator.pushReplacement(
             //context,

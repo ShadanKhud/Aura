@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:aura_app/Settings/settings.dart';
 import 'package:aura_app/Home/homeList.dart';
+import 'package:aura_app/Home/listMode.dart';
 
 class PlaceholderPage extends StatelessWidget {
   @override
@@ -21,7 +22,7 @@ class PlaceholderPage extends StatelessWidget {
           if (index == 0) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => HomeScreen()),
+              MaterialPageRoute(builder: (context) => ProductsPage()),
             );
           } else if (index == 1) {
             //Navigator.pushReplacement(
