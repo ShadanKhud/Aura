@@ -9,7 +9,6 @@ import 'firebase_options.dart';
 
 void main()  async{
   WidgetsFlutterBinding.ensureInitialized(); 
-  //String secret ="sk_test_51Qrl4ARth5SQH9HL6u9t5ryvllJyPSpGVtTFt3xY4US1tki0kIvdCiRnkSO3BHGWIMI6I4zImWk5nsndcreUrfJz004vj2yoQM";
   Stripe.publishableKey = 'pk_test_51Qrl4ARth5SQH9HLDR1AfGs1AJbSm2HyO70GilrQQDtmxtExVCr9CDamudrwhBsq23TkP6bHSwqFlyLMyqxnrcIj001ofWobik';
   await Stripe.instance.applySettings();
   await Firebase.initializeApp(

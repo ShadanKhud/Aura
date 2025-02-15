@@ -6,74 +6,104 @@ import 'package:aura_app/wishlist/wishlist.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class ProductsPage extends StatefulWidget {
-  const ProductsPage({super.key});
+  const ProductsPage({Key? key}) : super(key: key);
 
   @override
   _ProductsPageState createState() => _ProductsPageState();
 }
 
 class _ProductsPageState extends State<ProductsPage> {
-  late ScrollController _scrollController;
-  late QuerySnapshot _productsSnapshot;
+  final ScrollController _scrollController = ScrollController();
+  final List<DocumentSnapshot> _documents = [];
+
   bool _isLoading = false;
   bool _hasMore = true;
-  Map<String, dynamic>? _selectedProduct; // Track the selected product
+
+  Map<String, dynamic>? _selectedProduct;
 
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController();
     _scrollController.addListener(_scrollListener);
     _loadProducts();
   }
 
   void _scrollListener() {
+    // If the user scrolled to the bottom, and we still have more data to load
     if (_scrollController.position.pixels ==
             _scrollController.position.maxScrollExtent &&
         !_isLoading &&
         _hasMore) {
-      // If we are at the bottom of the list and not currently loading
       _loadMoreProducts();
     }
   }
 
-  Future<void> _loadProducts() async {
-    setState(() {
-      _isLoading = true;
-    });
+ Future<void> _loadProducts() async {
+  setState(() => _isLoading = true);
 
-    // Fetch the initial set of products (e.g., limit to 6)
-    var snapshot = await FirebaseFirestore.instance
-        .collection('products_asos')
-        .limit(6)
-        .get();
+  try {
+    Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection('clothes');
+
+    // Apply filters
+    if (_filters['colors'].isNotEmpty) {
+      query = query.where('colors', arrayContainsAny: _filters['colors']);
+    }
+    if (_filters['sizes'].isNotEmpty) {
+      query = query.where('sizes', arrayContainsAny: _filters['sizes']);
+    }
+    if (_filters['stores'].isNotEmpty) {
+      query = query.where('store_id', whereIn: _filters['stores']);
+    }
+
+    // Apply sorting
+    switch (_currentSort) {
+      case 'rating-high-low':
+        query = query.orderBy('rating', descending: true);
+        break;
+      case 'rating-low-high':
+        query = query.orderBy('rating', descending: false);
+        break;
+      case 'price-high-low':
+        query = query.orderBy('price', descending: true);
+        break;
+      case 'price-low-high':
+        query = query.orderBy('price', descending: false);
+        break;
+      default:
+        query = query.orderBy('product_number', descending: false);
+    }
+
+    final snapshot = await query.limit(6).get();
 
     setState(() {
+      _documents.clear();
+      _documents.addAll(snapshot.docs);
+      _hasMore = snapshot.docs.length == 6;
       _isLoading = false;
-      _productsSnapshot = snapshot;
-      _hasMore = snapshot.docs.length == 6; // Check if more products exist
     });
+  } catch (e) {
+    print('Error loading products: $e');
+    setState(() => _isLoading = false);
   }
+}
 
   Future<void> _loadMoreProducts() async {
     if (!_hasMore) return;
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
-    // Fetch more products starting from the last document in the current snapshot
-    var lastDoc = _productsSnapshot.docs.last;
-    var snapshot = await FirebaseFirestore.instance
-        .collection('products_asos')
+    // Start after the last document in the current list
+    final lastDoc = _documents.last;
+    final snapshot = await FirebaseFirestore.instance
+        .collection('clothes')
         .startAfterDocument(lastDoc)
         .limit(6)
         .get();
 
     setState(() {
       _isLoading = false;
-      _productsSnapshot.docs.addAll(snapshot.docs); // Append the new products
-      _hasMore = snapshot.docs.length == 6; // Check if more products exist
+      _documents.addAll(snapshot.docs);
+      _hasMore = (snapshot.docs.length == 6);
     });
   }
 
@@ -94,41 +124,296 @@ class _ProductsPageState extends State<ProductsPage> {
       _selectedProduct = null;
     });
   }
+// First, add these state variables to your _ProductsPageState class:
+String _currentSort = 'recommended';
+Map<String, dynamic> _filters = {
+  'colors': <String>[],
+  'sizes': <String>[],
+  'brands': <String>[],
+  'stores': <String>[],
+  'priceRange': const RangeValues(10, 8000),
+  'ratingRange': const RangeValues(0, 5),
+};
 
-  // Function to handle adding product to wishlist
+// Add these methods to your _ProductsPageState class:
+void _showSortDialog() {
+  showModalBottomSheet(
+    context: context,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (context) => _buildSortBottomSheet(),
+  );
+}
+
+Widget _buildSortBottomSheet() {
+  return Container(
+    padding: const EdgeInsets.all(16),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text(
+          'Sort by',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 16),
+        ListTile(
+          title: const Text('Recommended (default)'),
+          leading: Radio<String>(
+            value: 'recommended',
+            groupValue: _currentSort,
+            onChanged: (value) {
+              setState(() => _currentSort = value!);
+              _loadProducts();
+              Navigator.pop(context);
+            },
+          ),
+        ),
+        ListTile(
+          title: const Text('Rating - High to low'),
+          leading: Radio<String>(
+            value: 'rating-high-low',
+            groupValue: _currentSort,
+            onChanged: (value) {
+              setState(() => _currentSort = value!);
+              _loadProducts();
+              Navigator.pop(context);
+            },
+          ),
+        ),
+        ListTile(
+          title: const Text('Rating - Low to high'),
+          leading: Radio<String>(
+            value: 'rating-low-high',
+            groupValue: _currentSort,
+            onChanged: (value) {
+              setState(() => _currentSort = value!);
+              _loadProducts();
+              Navigator.pop(context);
+            },
+          ),
+        ),
+        ListTile(
+          title: const Text('Price - High to low'),
+          leading: Radio<String>(
+            value: 'price-high-low',
+            groupValue: _currentSort,
+            onChanged: (value) {
+              setState(() => _currentSort = value!);
+              _loadProducts();
+              Navigator.pop(context);
+            },
+          ),
+        ),
+        ListTile(
+          title: const Text('Price - Low to high'),
+          leading: Radio<String>(
+            value: 'price-low-high',
+            groupValue: _currentSort,
+            onChanged: (value) {
+              setState(() => _currentSort = value!);
+              _loadProducts();
+              Navigator.pop(context);
+            },
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+void _showFilterDialog() {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (context) => _buildFilterBottomSheet(),
+  );
+}
+
+Widget _buildFilterBottomSheet() {
+  return DraggableScrollableSheet(
+    initialChildSize: 0.9,
+    minChildSize: 0.5,
+    maxChildSize: 0.9,
+    builder: (context, scrollController) => Container(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Filters',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          Expanded(
+            child: ListView(
+              controller: scrollController,
+              children: [
+                _buildFilterSection('Color', ['Black', 'Blue', 'Brown', 'Copper', 'Gold', 'Green', 'Grey', 'Navy']),
+                _buildFilterSection('Size', ['X-Small', 'Small', 'Medium', 'Large', 'X-Large']),
+                _buildFilterSection('Store', ['Amazon', 'Bershka', 'H&M', 'Zara']),
+                _buildPriceRangeSlider(),
+                _buildRatingRangeSlider(),
+              ],
+            ),
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () {
+                    setState(() {
+                      _filters = {
+                        'colors': <String>[],
+                        'sizes': <String>[],
+                        'brands': <String>[],
+                        'stores': <String>[],
+                        'priceRange': const RangeValues(10, 8000),
+                        'ratingRange': const RangeValues(0, 5),
+                      };
+                    });
+                  },
+                  child: const Text('Reset'),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    _loadProducts();
+                    Navigator.pop(context);
+                  },
+                  child: const Text('View Items'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+Widget _buildFilterSection(String title, List<String> options) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        title,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      ),
+      const SizedBox(height: 8),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: options.map((option) => FilterChip(
+          label: Text(option),
+          selected: _filters[title.toLowerCase()].contains(option),
+          onSelected: (selected) {
+            setState(() {
+              if (selected) {
+                _filters[title.toLowerCase()].add(option);
+              } else {
+                _filters[title.toLowerCase()].remove(option);
+              }
+            });
+          },
+        )).toList(),
+      ),
+      const Divider(),
+    ],
+  );
+}
+
+Widget _buildPriceRangeSlider() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        'Price range',
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      ),
+      RangeSlider(
+        values: _filters['priceRange'],
+        min: 10,
+        max: 8000,
+        divisions: 799,
+        labels: RangeLabels(
+          '${_filters['priceRange'].start.round()} SAR',
+          '${_filters['priceRange'].end.round()} SAR',
+        ),
+        onChanged: (values) {
+          setState(() {
+            _filters['priceRange'] = values;
+          });
+        },
+      ),
+      const Divider(),
+    ],
+  );
+}
+
+Widget _buildRatingRangeSlider() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        'Rating range',
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      ),
+      RangeSlider(
+        values: _filters['ratingRange'],
+        min: 0,
+        max: 5,
+        divisions: 50,
+        labels: RangeLabels(
+          _filters['ratingRange'].start.toStringAsFixed(1),
+          _filters['ratingRange'].end.toStringAsFixed(1),
+        ),
+        onChanged: (values) {
+          setState(() {
+            _filters['ratingRange'] = values;
+          });
+        },
+      ),
+    ],
+  );
+}
+
+
+  // Add to wishlist
   Future<void> _addToWishlist(DocumentSnapshot productSnapshot) async {
     try {
-      // Get the current user ID
-      User? user = FirebaseAuth.instance.currentUser;
-      if (user == null) return; // Make sure the user is authenticated
+      // Get current user ID
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
 
-      String userId = user.uid;
+      final userId = user.uid;
+      final productId = productSnapshot.id; 
+      // or if you prefer the "Item_id" from your doc:
+      // final productId = productSnapshot['Item_id'];
 
-      // Use the product's document ID as the productId
-      String productId = productSnapshot.id;
-
-      // Add the product to the user's wishlist in Firestore
+      // Add the product to the user's wishlist subcollection
       await FirebaseFirestore.instance
-          .collection('customers') // Collection where user's wishlist is stored
-          .doc(userId) // Document for the current user
-          .collection('wishlist') // Subcollection for the wishlist
-          .doc(productId) // Use productId as the document ID
+          .collection('customers')
+          .doc(userId)
+          .collection('wishlist')
+          .doc(productId)
           .set({
         'productId': productId,
-        'addedAt':
-            FieldValue.serverTimestamp(), // Add timestamp when product is added
+        'addedAt': FieldValue.serverTimestamp(),
       });
 
-      // Show confirmation to the user
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Product added to your wishlist!'),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Product added to your wishlist!')),
+      );
     } catch (e) {
       print("Error adding product to wishlist: $e");
-      // Show error message if something goes wrong
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Error adding product to wishlist.'),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error adding product to wishlist.')),
+      );
     }
   }
 
@@ -140,56 +425,91 @@ class _ProductsPageState extends State<ProductsPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.swap_horiz),
-            onPressed: () {},
+            onPressed: () {
+              // Swipe mode action
+            },
           ),
         ],
+        
       ),
       body: Column(
         children: [
-          // Show the product details view if a product is selected, else show the grid
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _showSortDialog,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Text('SORT'),
+                        Icon(Icons.arrow_drop_down),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _showFilterDialog,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Text('FILTER'),
+                        Icon(Icons.filter_list),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           Expanded(
             child: _selectedProduct == null
-                ? _isLoading && _productsSnapshot.docs.isEmpty
+                // If loading & no docs, show spinner
+                ? (_isLoading && _documents.isEmpty)
                     ? const Center(child: CircularProgressIndicator())
-                    : _productsSnapshot.docs.isEmpty
+                    : _documents.isEmpty
                         ? const Center(child: Text('No products found'))
                         : GridView.builder(
                             controller: _scrollController,
                             padding: const EdgeInsets.all(8.0),
                             gridDelegate:
                                 const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2, // 2 columns
+                              crossAxisCount: 2,
                               crossAxisSpacing: 10.0,
                               mainAxisSpacing: 10.0,
-                              childAspectRatio:
-                                  0.75, // Aspect ratio for the grid items
+                              childAspectRatio: 0.75,
                             ),
-                            itemCount: _productsSnapshot.docs.length,
+                            itemCount: _documents.length,
                             itemBuilder: (context, index) {
-                              var product = _productsSnapshot.docs[index].data()
+                              final productSnapshot = _documents[index];
+                              final product = productSnapshot.data()
                                   as Map<String, dynamic>;
-                              var productSnapshot =
-                                  _productsSnapshot.docs[index];
 
-                              // Ensure product contains necessary data
+                              // Make sure images & price & title exist
                               if (product['images'] == null ||
-                                  product['name'] == null ||
-                                  product['price'] == null) {
+                                  product['price'] == null ||
+                                  product['title'] == null) {
                                 return const Center(
-                                    child: Text('Product data is incomplete'));
+                                  child: Text('Product data is incomplete'),
+                                );
                               }
 
                               return ProductCard(
                                 product: product,
                                 onTap: () => _selectProduct(product),
-                                onHeartPressed: () => _addToWishlist(
-                                    productSnapshot), // Add to wishlist
+                                onHeartPressed: () =>
+                                    _addToWishlist(productSnapshot),
                               );
                             },
                           )
                 : _buildProductDetailView(),
           ),
-          if (_isLoading)
+          // Show a small loading indicator at bottom if fetching more
+          if (_isLoading && _selectedProduct == null)
             const Padding(
               padding: EdgeInsets.all(8.0),
               child: Center(child: CircularProgressIndicator()),
@@ -200,22 +520,26 @@ class _ProductsPageState extends State<ProductsPage> {
         type: BottomNavigationBarType.fixed,
         selectedItemColor: const Color.fromARGB(255, 96, 95, 95),
         unselectedItemColor: Colors.grey,
-        currentIndex: 4, // Settings tab index
+        currentIndex: 4, // for "Settings"
         onTap: (index) {
           if (index == 0) {
-            return;
+            // Home - current page
           } else if (index == 1) {
-            // Navigate to Search Page
-            // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => SearchPage()));
+            // Search Page
+            // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => SearchPage()));
           } else if (index == 2) {
-            // Navigate to Cart Page
-            // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => CartPage()));
+            // Cart Page
+            // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => CartPage()));
           } else if (index == 3) {
-            Navigator.pushReplacement(context,
-                MaterialPageRoute(builder: (context) => WishlistPage()));
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => WishlistPage()),
+            );
           } else if (index == 4) {
-            Navigator.pushReplacement(context,
-                MaterialPageRoute(builder: (context) => SettingsPage()));
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => SettingsPage()),
+            );
           }
         },
         items: const [
@@ -223,43 +547,39 @@ class _ProductsPageState extends State<ProductsPage> {
           BottomNavigationBarItem(icon: Icon(Icons.search), label: "Search"),
           BottomNavigationBarItem(
               icon: Icon(Icons.shopping_cart), label: "My Cart"),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.favorite), label: "Wishlist"),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.settings), label: "Settings"),
+          BottomNavigationBarItem(icon: Icon(Icons.favorite), label: "Wishlist"),
+          BottomNavigationBarItem(icon: Icon(Icons.settings), label: "Settings"),
         ],
       ),
     );
   }
 
   Widget _buildProductDetailView() {
-    if (_selectedProduct == null) return Container();
+    if (_selectedProduct == null) return const SizedBox();
 
-    var product = _selectedProduct!;
-    String imagesString = product['images'];
-    imagesString = imagesString.replaceAll("'", '"');
-    List<String> imageUrls = List<String>.from(jsonDecode(imagesString));
+    final product = _selectedProduct!;
+    // images is already an array of URLs, so just cast it
+    final List<dynamic> imagesDynamic = product['images'];
+    final imageUrls = imagesDynamic.map((e) => e.toString()).toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          imageUrls.isNotEmpty
-              ? ClipRRect(
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(10)),
-                  child: Image.network(
-                    imageUrls[0], // First image URL from the list
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: 250, // Adjusted height for image
-                  ),
-                )
-              : Container(),
+          if (imageUrls.isNotEmpty)
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+              child: Image.network(
+                imageUrls[0],
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: 250,
+              ),
+            ),
           const SizedBox(height: 16),
           Text(
-            product['name'] ?? 'No Name',
+            product['title'] ?? 'No Title',
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
           ),
           const SizedBox(height: 8),
@@ -288,48 +608,51 @@ class ProductCard extends StatelessWidget {
   final VoidCallback onHeartPressed;
 
   const ProductCard({
-    super.key,
+    Key? key,
     required this.product,
     required this.onTap,
     required this.onHeartPressed,
-  });
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     try {
-      String imagesString = product['images'];
-      imagesString = imagesString.replaceAll("'", '"');
-      List<String> imageUrls = List<String>.from(jsonDecode(imagesString));
+      // `images` is an array, so just cast it
+      final List<dynamic> imagesDynamic = product['images'];
+      final imageUrls = imagesDynamic.map((e) => e.toString()).toList();
+
+      final String title = product['title'] ?? 'No Title';
+      final String price = product['price'] ?? 'N/A';
 
       return GestureDetector(
         onTap: onTap,
         child: Card(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           child: Stack(
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  imageUrls.isNotEmpty
-                      ? ClipRRect(
-                          borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(10)),
-                          child: Image.network(
-                            imageUrls[0],
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: 180,
-                          ),
-                        )
-                      : Container(),
+                  if (imageUrls.isNotEmpty)
+                    ClipRRect(
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(10)),
+                      child: Image.network(
+                        imageUrls[0],
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: 180,
+                      ),
+                    ),
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          product['name'] ?? 'No Name',
+                          title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -339,7 +662,7 @@ class ProductCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${product['price'] ?? 'N/A'} SAR',
+                          '$price SAR',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Colors.black,

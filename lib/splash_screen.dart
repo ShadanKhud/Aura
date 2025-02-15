@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:aura_app/Home/homeList.dart';
+import 'package:aura_app/Home/listMode.dart';
 import 'Sign_up_in/login.dart'; // Import the LoginScreen class
 
 class SplashScreen extends StatefulWidget {
@@ -23,7 +23,7 @@ class _SplashScreenState extends State<SplashScreen> {
       // User is logged in, navigate to home screen
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => HomeScreen()),
+        MaterialPageRoute(builder: (context) => ProductsPage()),
       );
     } else {
       // User is not logged in, navigate to login screen

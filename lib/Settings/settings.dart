@@ -8,6 +8,7 @@ import 'package:aura_app/Settings/ShippingAddresses/MyShippingAddresses.dart';
 import 'package:aura_app/Settings//MyCreditCards/MyCreditCards.dart';
 import 'package:aura_app/Settings/manageMembers/manage_members2.dart';
 import 'package:aura_app/wishlist/wishlist.dart';
+import 'package:aura_app/Home/listMode.dart';
 
 class SettingsPage extends StatelessWidget {
   @override
@@ -165,7 +166,7 @@ class SettingsPage extends StatelessWidget {
           if (index == 0) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => HomeScreen()),
+              MaterialPageRoute(builder: (context) => ProductsPage()),
             );
           } else if (index == 1) {
             //Navigator.pushReplacement(
