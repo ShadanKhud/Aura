@@ -601,7 +601,6 @@ Widget _buildRatingRangeSlider() {
     );
   }
 }
-
 class ProductCard extends StatelessWidget {
   final Map<String, dynamic> product;
   final VoidCallback onTap;
@@ -617,18 +616,18 @@ class ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     try {
-      // `images` is an array, so just cast it
       final List<dynamic> imagesDynamic = product['images'];
       final imageUrls = imagesDynamic.map((e) => e.toString()).toList();
-
       final String title = product['title'] ?? 'No Title';
       final String price = product['price'] ?? 'N/A';
+      final double rating = product['rating']?.toDouble() ?? 0.0;
 
       return GestureDetector(
         onTap: onTap,
         child: Card(
+          elevation: 0.5,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(4),
           ),
           child: Stack(
             children: [
@@ -637,13 +636,14 @@ class ProductCard extends StatelessWidget {
                 children: [
                   if (imageUrls.isNotEmpty)
                     ClipRRect(
-                      borderRadius:
-                          const BorderRadius.vertical(top: Radius.circular(10)),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(4),
+                      ),
                       child: Image.network(
                         imageUrls[0],
                         fit: BoxFit.cover,
                         width: double.infinity,
-                        height: 180,
+                        height: 200,
                       ),
                     ),
                   Padding(
@@ -653,20 +653,42 @@ class ProductCard extends StatelessWidget {
                       children: [
                         Text(
                           title,
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
+                            fontSize: 13,
+                            color: Colors.black87,
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          '$price SAR',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '${price} SAR',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black,
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                Text(
+                                  rating.toStringAsFixed(1),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.black54,
+                                  ),
+                                ),
+                                const Icon(
+                                  Icons.star,
+                                  size: 14,
+                                  color: Colors.amber,
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -674,12 +696,13 @@ class ProductCard extends StatelessWidget {
                 ],
               ),
               Positioned(
-                top: 8,
-                right: 8,
+                top: 4,
+                right: 4,
                 child: IconButton(
                   icon: const Icon(
                     Icons.favorite_border,
-                    color: Colors.grey,
+                    color: Colors.black26,
+                    size: 20,
                   ),
                   onPressed: onHeartPressed,
                 ),
@@ -693,4 +716,4 @@ class ProductCard extends StatelessWidget {
       return const Center(child: Text('Error rendering product'));
     }
   }
-}
+} 
