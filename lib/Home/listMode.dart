@@ -419,19 +419,40 @@ Widget _buildRatingRangeSlider() {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Scaffold(//Theme.of(context).colorScheme.surface
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('AURA'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.swap_horiz),
-            onPressed: () {
-              // Swipe mode action
-            },
-          ),
-        ],
-        
+  backgroundColor: Colors.white,
+  title: Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      // Circular Account Image
+      CircleAvatar(
+        radius: 16, // Adjust size as needed
+       // backgroundImage: AssetImage('assets/profile.jpg'), // Replace with the actual image path
       ),
+      const SizedBox(width: 10), // Space between avatar and logo
+      // Centered Logo
+      Expanded(
+        child: Image.asset(
+          'assets/AuraLogo.png',
+          scale: 5,
+         // fit: BoxFit.contain,
+        ),
+      ),
+    ],
+  ),
+  centerTitle: true, // Ensures title is centered
+  actions: [
+    IconButton(
+      icon: const Icon(Icons.swap_horiz),
+      onPressed: () {
+        // Swipe mode action
+      },
+    ),
+  ],
+),
+
       body: Column(
         children: [
           Padding(
@@ -480,8 +501,8 @@ Widget _buildRatingRangeSlider() {
                                 const SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 2,
                               crossAxisSpacing: 10.0,
-                              mainAxisSpacing: 10.0,
-                              childAspectRatio: 0.75,
+                              mainAxisSpacing: 5.0,
+                              childAspectRatio: 0.65,
                             ),
                             itemCount: _documents.length,
                             itemBuilder: (context, index) {
@@ -520,7 +541,7 @@ Widget _buildRatingRangeSlider() {
         type: BottomNavigationBarType.fixed,
         selectedItemColor: const Color.fromARGB(255, 96, 95, 95),
         unselectedItemColor: Colors.grey,
-        currentIndex: 4, // for "Settings"
+        currentIndex: 0, // for "Settings"
         onTap: (index) {
           if (index == 0) {
             // Home - current page
@@ -580,7 +601,7 @@ Widget _buildRatingRangeSlider() {
           const SizedBox(height: 16),
           Text(
             product['title'] ?? 'No Title',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+            style: const TextStyle(fontWeight: FontWeight.normal, fontSize: 20),
           ),
           const SizedBox(height: 8),
           Text(
@@ -601,6 +622,7 @@ Widget _buildRatingRangeSlider() {
     );
   }
 }
+
 class ProductCard extends StatelessWidget {
   final Map<String, dynamic> product;
   final VoidCallback onTap;
@@ -616,7 +638,7 @@ class ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     try {
-      final List<dynamic> imagesDynamic = product['images'];
+      final List<dynamic> imagesDynamic = product['images'] ?? [];
       final imageUrls = imagesDynamic.map((e) => e.toString()).toList();
       final String title = product['title'] ?? 'No Title';
       final String price = product['price'] ?? 'N/A';
@@ -625,86 +647,98 @@ class ProductCard extends StatelessWidget {
       return GestureDetector(
         onTap: onTap,
         child: Card(
-          elevation: 0.5,
+          elevation: 1,
+          color: Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(8),
           ),
-          child: Stack(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (imageUrls.isNotEmpty)
+              if (imageUrls.isNotEmpty)
+                Stack(
+                  children: [
                     ClipRRect(
                       borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(4),
+                        top: Radius.circular(8),
                       ),
-                      child: Image.network(
-                        imageUrls[0],
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: 200,
+                      child: AspectRatio(
+                        aspectRatio: 4 / 3,
+                        child: Image.network(
+                          imageUrls[0],
+                          fit: BoxFit.cover,
+                        ),
                       ),
                     ),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Colors.black87,
+                    // Heart Icon on top-right
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: InkWell(
+                        onTap: onHeartPressed,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white, // Background color for visibility
+                          ),
+                          child: const Icon(
+                            Icons.favorite_border,
+                            color: Colors.black54,
+                            size: 22,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                      ),
+                    ),
+                  ],
+                ),
+              Padding(
+                padding: const EdgeInsets.all(10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '$price SAR',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black,
+                          ),
+                        ),
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              '${price} SAR',
+                              rating.toStringAsFixed(1),
                               style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black,
+                                fontSize: 13,
+                                color: Colors.black54,
                               ),
                             ),
-                            Row(
-                              children: [
-                                Text(
-                                  rating.toStringAsFixed(1),
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.black54,
-                                  ),
-                                ),
-                                const Icon(
-                                  Icons.star,
-                                  size: 14,
-                                  color: Colors.amber,
-                                ),
-                              ],
+                            const SizedBox(width: 3),
+                            const Icon(
+                              Icons.star,
+                              size: 16,
+                              color: Colors.amber,
                             ),
                           ],
                         ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-              Positioned(
-                top: 4,
-                right: 4,
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.favorite_border,
-                    color: Colors.black26,
-                    size: 20,
-                  ),
-                  onPressed: onHeartPressed,
+                  ],
                 ),
               ),
             ],
@@ -716,4 +750,5 @@ class ProductCard extends StatelessWidget {
       return const Center(child: Text('Error rendering product'));
     }
   }
-} 
+}
+
