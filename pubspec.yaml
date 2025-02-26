@@ -38,6 +38,7 @@ dependencies:
   share_plus: ^10.1.4
   win32: ^5.5.3
   flutter_stripe: ^11.4.0
+  flutter_card_swiper: ^7.0.2
 
 
 

@@ -21,12 +21,24 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
   Widget build(BuildContext context) {
     final item = widget.itemDetails;
 
-    // Ensure images is a list
-    List<String> imageUrls = (item['images'] is List)
-        ? List<String>.from(item['images'])
-        : (item['images'] is String)
-            ? List<String>.from(jsonDecode(item['images']))
-            : [];
+    // Handle image URLs properly
+    String imagesString = item['images'] ?? '[]';
+
+    // Ensure correct JSON format (replace single quotes with double quotes)
+    imagesString = imagesString.replaceAll("'", '"');
+
+    // Try decoding the string into a list. If any error occurs, fallback to an empty list.
+    List<String> imageUrls = [];
+    try {
+      imageUrls = List<String>.from(jsonDecode(imagesString));
+    } catch (e) {
+      print("Error decoding image URLs: $e");
+      // Fallback to an empty list if decoding fails
+      imageUrls = [];
+    }
+
+    // Debug the parsed image URLs
+    print('Decoded Image URLs: $imageUrls');
 
     // Handle 'reviews' being null, default to an empty list
     List reviews = item['reviews'] ?? [];
@@ -49,12 +61,37 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Display images in a PageView
               SizedBox(
                 height: 250,
                 child: PageView.builder(
-                  itemCount: imageUrls.length,
+                  itemCount: imageUrls.isNotEmpty ? imageUrls.length : 1,
                   itemBuilder: (context, index) {
-                    return Image.network(imageUrls[index]);
+                    if (imageUrls.isNotEmpty) {
+                      print('Rendering image: ${imageUrls[index]}');
+                      return Image.network(
+                        imageUrls[index],
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) {
+                            return child;
+                          }
+                          return Center(
+                            child: CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      (loadingProgress.expectedTotalBytes ?? 1)
+                                  : null,
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Center(child: Text('Error loading image'));
+                        },
+                      );
+                    } else {
+                      return Center(child: Text('No images available.'));
+                    }
                   },
                 ),
               ),
@@ -66,7 +103,7 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
               const SizedBox(height: 8),
               Text(
                 "${item['price']} SAR",
-                style: TextStyle(fontSize: 18, color: Colors.green),
+                style: TextStyle(fontSize: 18, color: Colors.black),
               ),
               const SizedBox(height: 16),
               Row(

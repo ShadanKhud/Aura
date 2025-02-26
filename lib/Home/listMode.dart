@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:aura_app/Settings/settings.dart';
 import 'package:aura_app/wishlist/wishlist.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:aura_app/Home/swipeMode.dart';
 
 class ProductsPage extends StatefulWidget {
   const ProductsPage({Key? key}) : super(key: key);
@@ -39,54 +40,55 @@ class _ProductsPageState extends State<ProductsPage> {
     }
   }
 
- Future<void> _loadProducts() async {
-  setState(() => _isLoading = true);
+  Future<void> _loadProducts() async {
+    setState(() => _isLoading = true);
 
-  try {
-    Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection('clothes');
+    try {
+      Query<Map<String, dynamic>> query =
+          FirebaseFirestore.instance.collection('clothes');
 
-    // Apply filters
-    if (_filters['colors'].isNotEmpty) {
-      query = query.where('colors', arrayContainsAny: _filters['colors']);
+      // Apply filters
+      if (_filters['colors'].isNotEmpty) {
+        query = query.where('colors', arrayContainsAny: _filters['colors']);
+      }
+      if (_filters['sizes'].isNotEmpty) {
+        query = query.where('sizes', arrayContainsAny: _filters['sizes']);
+      }
+      if (_filters['stores'].isNotEmpty) {
+        query = query.where('store_id', whereIn: _filters['stores']);
+      }
+
+      // Apply sorting
+      switch (_currentSort) {
+        case 'rating-high-low':
+          query = query.orderBy('rating', descending: true);
+          break;
+        case 'rating-low-high':
+          query = query.orderBy('rating', descending: false);
+          break;
+        case 'price-high-low':
+          query = query.orderBy('price', descending: true);
+          break;
+        case 'price-low-high':
+          query = query.orderBy('price', descending: false);
+          break;
+        default:
+          query = query.orderBy('product_number', descending: false);
+      }
+
+      final snapshot = await query.limit(6).get();
+
+      setState(() {
+        _documents.clear();
+        _documents.addAll(snapshot.docs);
+        _hasMore = snapshot.docs.length == 6;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading products: $e');
+      setState(() => _isLoading = false);
     }
-    if (_filters['sizes'].isNotEmpty) {
-      query = query.where('sizes', arrayContainsAny: _filters['sizes']);
-    }
-    if (_filters['stores'].isNotEmpty) {
-      query = query.where('store_id', whereIn: _filters['stores']);
-    }
-
-    // Apply sorting
-    switch (_currentSort) {
-      case 'rating-high-low':
-        query = query.orderBy('rating', descending: true);
-        break;
-      case 'rating-low-high':
-        query = query.orderBy('rating', descending: false);
-        break;
-      case 'price-high-low':
-        query = query.orderBy('price', descending: true);
-        break;
-      case 'price-low-high':
-        query = query.orderBy('price', descending: false);
-        break;
-      default:
-        query = query.orderBy('product_number', descending: false);
-    }
-
-    final snapshot = await query.limit(6).get();
-
-    setState(() {
-      _documents.clear();
-      _documents.addAll(snapshot.docs);
-      _hasMore = snapshot.docs.length == 6;
-      _isLoading = false;
-    });
-  } catch (e) {
-    print('Error loading products: $e');
-    setState(() => _isLoading = false);
   }
-}
 
   Future<void> _loadMoreProducts() async {
     if (!_hasMore) return;
@@ -134,264 +136,277 @@ void _NavToDetialsPage() {
       _selectedProduct = null;
     });
   }
+
 // First, add these state variables to your _ProductsPageState class:
-String _currentSort = 'recommended';
-Map<String, dynamic> _filters = {
-  'colors': <String>[],
-  'sizes': <String>[],
-  'brands': <String>[],
-  'stores': <String>[],
-  'priceRange': const RangeValues(10, 8000),
-  'ratingRange': const RangeValues(0, 5),
-};
+  String _currentSort = 'recommended';
+  Map<String, dynamic> _filters = {
+    'colors': <String>[],
+    'sizes': <String>[],
+    'brands': <String>[],
+    'stores': <String>[],
+    'priceRange': const RangeValues(10, 8000),
+    'ratingRange': const RangeValues(0, 5),
+  };
 
 // Add these methods to your _ProductsPageState class:
-void _showSortDialog() {
-  showModalBottomSheet(
-    context: context,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (context) => _buildSortBottomSheet(),
-  );
-}
+  void _showSortDialog() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => _buildSortBottomSheet(),
+    );
+  }
 
-Widget _buildSortBottomSheet() {
-  return Container(
-    padding: const EdgeInsets.all(16),
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Text(
-          'Sort by',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 16),
-        ListTile(
-          title: const Text('Recommended (default)'),
-          leading: Radio<String>(
-            value: 'recommended',
-            groupValue: _currentSort,
-            onChanged: (value) {
-              setState(() => _currentSort = value!);
-              _loadProducts();
-              Navigator.pop(context);
-            },
-          ),
-        ),
-        ListTile(
-          title: const Text('Rating - High to low'),
-          leading: Radio<String>(
-            value: 'rating-high-low',
-            groupValue: _currentSort,
-            onChanged: (value) {
-              setState(() => _currentSort = value!);
-              _loadProducts();
-              Navigator.pop(context);
-            },
-          ),
-        ),
-        ListTile(
-          title: const Text('Rating - Low to high'),
-          leading: Radio<String>(
-            value: 'rating-low-high',
-            groupValue: _currentSort,
-            onChanged: (value) {
-              setState(() => _currentSort = value!);
-              _loadProducts();
-              Navigator.pop(context);
-            },
-          ),
-        ),
-        ListTile(
-          title: const Text('Price - High to low'),
-          leading: Radio<String>(
-            value: 'price-high-low',
-            groupValue: _currentSort,
-            onChanged: (value) {
-              setState(() => _currentSort = value!);
-              _loadProducts();
-              Navigator.pop(context);
-            },
-          ),
-        ),
-        ListTile(
-          title: const Text('Price - Low to high'),
-          leading: Radio<String>(
-            value: 'price-low-high',
-            groupValue: _currentSort,
-            onChanged: (value) {
-              setState(() => _currentSort = value!);
-              _loadProducts();
-              Navigator.pop(context);
-            },
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-void _showFilterDialog() {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (context) => _buildFilterBottomSheet(),
-  );
-}
-
-Widget _buildFilterBottomSheet() {
-  return DraggableScrollableSheet(
-    initialChildSize: 0.9,
-    minChildSize: 0.5,
-    maxChildSize: 0.9,
-    builder: (context, scrollController) => Container(
+  Widget _buildSortBottomSheet() {
+    return Container(
       padding: const EdgeInsets.all(16),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
           const Text(
-            'Filters',
+            'Sort by',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
-          Expanded(
-            child: ListView(
-              controller: scrollController,
-              children: [
-                _buildFilterSection('Color', ['Black', 'Blue', 'Brown', 'Copper', 'Gold', 'Green', 'Grey', 'Navy']),
-                _buildFilterSection('Size', ['X-Small', 'Small', 'Medium', 'Large', 'X-Large']),
-                _buildFilterSection('Store', ['Amazon', 'Bershka', 'H&M', 'Zara']),
-                _buildPriceRangeSlider(),
-                _buildRatingRangeSlider(),
-              ],
+          const SizedBox(height: 16),
+          ListTile(
+            title: const Text('Recommended (default)'),
+            leading: Radio<String>(
+              value: 'recommended',
+              groupValue: _currentSort,
+              onChanged: (value) {
+                setState(() => _currentSort = value!);
+                _loadProducts();
+                Navigator.pop(context);
+              },
             ),
           ),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {
-                    setState(() {
-                      _filters = {
-                        'colors': <String>[],
-                        'sizes': <String>[],
-                        'brands': <String>[],
-                        'stores': <String>[],
-                        'priceRange': const RangeValues(10, 8000),
-                        'ratingRange': const RangeValues(0, 5),
-                      };
-                    });
-                  },
-                  child: const Text('Reset'),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    _loadProducts();
-                    Navigator.pop(context);
-                  },
-                  child: const Text('View Items'),
-                ),
-              ),
-            ],
+          ListTile(
+            title: const Text('Rating - High to low'),
+            leading: Radio<String>(
+              value: 'rating-high-low',
+              groupValue: _currentSort,
+              onChanged: (value) {
+                setState(() => _currentSort = value!);
+                _loadProducts();
+                Navigator.pop(context);
+              },
+            ),
+          ),
+          ListTile(
+            title: const Text('Rating - Low to high'),
+            leading: Radio<String>(
+              value: 'rating-low-high',
+              groupValue: _currentSort,
+              onChanged: (value) {
+                setState(() => _currentSort = value!);
+                _loadProducts();
+                Navigator.pop(context);
+              },
+            ),
+          ),
+          ListTile(
+            title: const Text('Price - High to low'),
+            leading: Radio<String>(
+              value: 'price-high-low',
+              groupValue: _currentSort,
+              onChanged: (value) {
+                setState(() => _currentSort = value!);
+                _loadProducts();
+                Navigator.pop(context);
+              },
+            ),
+          ),
+          ListTile(
+            title: const Text('Price - Low to high'),
+            leading: Radio<String>(
+              value: 'price-low-high',
+              groupValue: _currentSort,
+              onChanged: (value) {
+                setState(() => _currentSort = value!);
+                _loadProducts();
+                Navigator.pop(context);
+              },
+            ),
           ),
         ],
       ),
-    ),
-  );
-}
+    );
+  }
 
-Widget _buildFilterSection(String title, List<String> options) {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        title,
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+  void _showFilterDialog() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      const SizedBox(height: 8),
-      Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: options.map((option) => FilterChip(
-          label: Text(option),
-          selected: _filters[title.toLowerCase()].contains(option),
-          onSelected: (selected) {
+      builder: (context) => _buildFilterBottomSheet(),
+    );
+  }
+
+  Widget _buildFilterBottomSheet() {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.9,
+      minChildSize: 0.5,
+      maxChildSize: 0.9,
+      builder: (context, scrollController) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Filters',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            Expanded(
+              child: ListView(
+                controller: scrollController,
+                children: [
+                  _buildFilterSection('Color', [
+                    'Black',
+                    'Blue',
+                    'Brown',
+                    'Copper',
+                    'Gold',
+                    'Green',
+                    'Grey',
+                    'Navy'
+                  ]),
+                  _buildFilterSection('Size',
+                      ['X-Small', 'Small', 'Medium', 'Large', 'X-Large']),
+                  _buildFilterSection(
+                      'Store', ['Amazon', 'Bershka', 'H&M', 'Zara']),
+                  _buildPriceRangeSlider(),
+                  _buildRatingRangeSlider(),
+                ],
+              ),
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      setState(() {
+                        _filters = {
+                          'colors': <String>[],
+                          'sizes': <String>[],
+                          'brands': <String>[],
+                          'stores': <String>[],
+                          'priceRange': const RangeValues(10, 8000),
+                          'ratingRange': const RangeValues(0, 5),
+                        };
+                      });
+                    },
+                    child: const Text('Reset'),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      _loadProducts();
+                      Navigator.pop(context);
+                    },
+                    child: const Text('View Items'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterSection(String title, List<String> options) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: options
+              .map((option) => FilterChip(
+                    label: Text(option),
+                    selected: _filters[title.toLowerCase()].contains(option),
+                    onSelected: (selected) {
+                      setState(() {
+                        if (selected) {
+                          _filters[title.toLowerCase()].add(option);
+                        } else {
+                          _filters[title.toLowerCase()].remove(option);
+                        }
+                      });
+                    },
+                  ))
+              .toList(),
+        ),
+        const Divider(),
+      ],
+    );
+  }
+
+  Widget _buildPriceRangeSlider() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Price range',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        RangeSlider(
+          values: _filters['priceRange'],
+          min: 10,
+          max: 8000,
+          divisions: 799,
+          labels: RangeLabels(
+            '${_filters['priceRange'].start.round()} SAR',
+            '${_filters['priceRange'].end.round()} SAR',
+          ),
+          onChanged: (values) {
             setState(() {
-              if (selected) {
-                _filters[title.toLowerCase()].add(option);
-              } else {
-                _filters[title.toLowerCase()].remove(option);
-              }
+              _filters['priceRange'] = values;
             });
           },
-        )).toList(),
-      ),
-      const Divider(),
-    ],
-  );
-}
-
-Widget _buildPriceRangeSlider() {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Text(
-        'Price range',
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-      ),
-      RangeSlider(
-        values: _filters['priceRange'],
-        min: 10,
-        max: 8000,
-        divisions: 799,
-        labels: RangeLabels(
-          '${_filters['priceRange'].start.round()} SAR',
-          '${_filters['priceRange'].end.round()} SAR',
         ),
-        onChanged: (values) {
-          setState(() {
-            _filters['priceRange'] = values;
-          });
-        },
-      ),
-      const Divider(),
-    ],
-  );
-}
+        const Divider(),
+      ],
+    );
+  }
 
-Widget _buildRatingRangeSlider() {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Text(
-        'Rating range',
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-      ),
-      RangeSlider(
-        values: _filters['ratingRange'],
-        min: 0,
-        max: 5,
-        divisions: 50,
-        labels: RangeLabels(
-          _filters['ratingRange'].start.toStringAsFixed(1),
-          _filters['ratingRange'].end.toStringAsFixed(1),
+  Widget _buildRatingRangeSlider() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Rating range',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
-        onChanged: (values) {
-          setState(() {
-            _filters['ratingRange'] = values;
-          });
-        },
-      ),
-    ],
-  );
-}
-
+        RangeSlider(
+          values: _filters['ratingRange'],
+          min: 0,
+          max: 5,
+          divisions: 50,
+          labels: RangeLabels(
+            _filters['ratingRange'].start.toStringAsFixed(1),
+            _filters['ratingRange'].end.toStringAsFixed(1),
+          ),
+          onChanged: (values) {
+            setState(() {
+              _filters['ratingRange'] = values;
+            });
+          },
+        ),
+      ],
+    );
+  }
 
   // Add to wishlist
   Future<void> _addToWishlist(DocumentSnapshot productSnapshot) async {
@@ -401,7 +416,7 @@ Widget _buildRatingRangeSlider() {
       if (user == null) return;
 
       final userId = user.uid;
-      final productId = productSnapshot.id; 
+      final productId = productSnapshot.id;
       // or if you prefer the "Item_id" from your doc:
       // final productId = productSnapshot['Item_id'];
 
@@ -429,39 +444,72 @@ Widget _buildRatingRangeSlider() {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(//Theme.of(context).colorScheme.surface
+    return Scaffold(
+      //Theme.of(context).colorScheme.surface
       backgroundColor: Colors.white,
       appBar: AppBar(
-  backgroundColor: Colors.white,
-  title: Row(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: [
-      // Circular Account Image
-      CircleAvatar(
-        radius: 16, // Adjust size as needed
-       // backgroundImage: AssetImage('assets/profile.jpg'), // Replace with the actual image path
-      ),
-      const SizedBox(width: 10), // Space between avatar and logo
-      // Centered Logo
-      Expanded(
-        child: Image.asset(
-          'assets/AuraLogo.png',
-          scale: 5,
-         // fit: BoxFit.contain,
+        backgroundColor: Colors.white,
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Circular Account Image
+            CircleAvatar(
+              radius: 16, // Adjust size as needed
+              // backgroundImage: AssetImage('assets/profile.jpg'), // Replace with the actual image path
+            ),
+            const SizedBox(width: 10), // Space between avatar and logo
+            // Centered Logo
+            Expanded(
+              child: Image.asset(
+                'assets/AuraLogo.png',
+                scale: 5,
+                // fit: BoxFit.contain,
+              ),
+            ),
+          ],
         ),
+        centerTitle: true, // Ensures title is centered
+        actions: [
+          IconButton(
+            icon: Stack(
+              alignment: Alignment.center,
+              children: [
+                Transform.translate(
+                  offset: const Offset(3, 3), // Shadow effect
+                  child: Container(
+                    width: 20, // Reduced size to fit
+                    height: 20,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: Colors.grey.shade400,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+                Container(
+                  width: 20, // Reduced size to fit
+                  height: 20,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: const Color.fromARGB(255, 0, 0, 0),
+                      width: 2,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SwipeModePage()),
+              );
+            },
+          ),
+        ],
       ),
-    ],
-  ),
-  centerTitle: true, // Ensures title is centered
-  actions: [
-    IconButton(
-      icon: const Icon(Icons.swap_horiz),
-      onPressed: () {
-        // Swipe mode action
-      },
-    ),
-  ],
-),
 
       body: Column(
         children: [
@@ -579,8 +627,10 @@ Widget _buildRatingRangeSlider() {
           BottomNavigationBarItem(icon: Icon(Icons.search), label: "Search"),
           BottomNavigationBarItem(
               icon: Icon(Icons.shopping_cart), label: "My Cart"),
-          BottomNavigationBarItem(icon: Icon(Icons.favorite), label: "Wishlist"),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: "Settings"),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.favorite), label: "Wishlist"),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.settings), label: "Settings"),
         ],
       ),
     );
@@ -691,7 +741,8 @@ class ProductCard extends StatelessWidget {
                           padding: const EdgeInsets.all(6),
                           decoration: const BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Colors.white, // Background color for visibility
+                            color:
+                                Colors.white, // Background color for visibility
                           ),
                           child: const Icon(
                             Icons.favorite_border,
@@ -762,4 +813,3 @@ class ProductCard extends StatelessWidget {
     }
   }
 }
-
