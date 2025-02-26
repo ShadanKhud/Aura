@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:aura_app/itemDetails/ItemDetailsPage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:aura_app/Settings/settings.dart';
@@ -118,7 +119,16 @@ class _ProductsPageState extends State<ProductsPage> {
       _selectedProduct = product;
     });
   }
-
+void _NavToDetialsPage() {
+  if (_selectedProduct != null) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ItemDetailsPage(itemDetails: _selectedProduct!),
+      ),
+    );
+  }
+}
   void _deselectProduct() {
     setState(() {
       _selectedProduct = null;
@@ -488,47 +498,48 @@ Widget _buildRatingRangeSlider() {
             ),
           ),
           Expanded(
-            child: _selectedProduct == null
-                // If loading & no docs, show spinner
-                ? (_isLoading && _documents.isEmpty)
-                    ? const Center(child: CircularProgressIndicator())
-                    : _documents.isEmpty
-                        ? const Center(child: Text('No products found'))
-                        : GridView.builder(
-                            controller: _scrollController,
-                            padding: const EdgeInsets.all(8.0),
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 10.0,
-                              mainAxisSpacing: 5.0,
-                              childAspectRatio: 0.65,
-                            ),
-                            itemCount: _documents.length,
-                            itemBuilder: (context, index) {
-                              final productSnapshot = _documents[index];
-                              final product = productSnapshot.data()
-                                  as Map<String, dynamic>;
+  child: (_isLoading && _documents.isEmpty)
+      ? const Center(child: CircularProgressIndicator())
+      : _documents.isEmpty
+          ? const Center(child: Text('No products found'))
+          : GridView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.all(8.0),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 10.0,
+                mainAxisSpacing: 5.0,
+                childAspectRatio: 0.65,
+              ),
+              itemCount: _documents.length,
+              itemBuilder: (context, index) {
+                final productSnapshot = _documents[index];
+                final product = productSnapshot.data() as Map<String, dynamic>;
 
-                              // Make sure images & price & title exist
-                              if (product['images'] == null ||
-                                  product['price'] == null ||
-                                  product['title'] == null) {
-                                return const Center(
-                                  child: Text('Product data is incomplete'),
-                                );
-                              }
+                // Make sure images & price & title exist
+                if (product['images'] == null ||
+                    product['price'] == null ||
+                    product['title'] == null) {
+                  return const Center(
+                    child: Text('Product data is incomplete'),
+                  );
+                }
 
-                              return ProductCard(
-                                product: product,
-                                onTap: () => _selectProduct(product),
-                                onHeartPressed: () =>
-                                    _addToWishlist(productSnapshot),
-                              );
-                            },
-                          )
-                : _buildProductDetailView(),
-          ),
+                return ProductCard(
+                  product: product,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ItemDetailsPage(itemDetails: product),
+                      ),
+                    );
+                  },
+                  onHeartPressed: () => _addToWishlist(productSnapshot),
+                );
+              },
+            ),
+),
           // Show a small loading indicator at bottom if fetching more
           if (_isLoading && _selectedProduct == null)
             const Padding(
@@ -575,52 +586,52 @@ Widget _buildRatingRangeSlider() {
     );
   }
 
-  Widget _buildProductDetailView() {
-    if (_selectedProduct == null) return const SizedBox();
+  // Widget _buildProductDetailView() {
+  //   if (_selectedProduct == null) return const SizedBox();
 
-    final product = _selectedProduct!;
-    // images is already an array of URLs, so just cast it
-    final List<dynamic> imagesDynamic = product['images'];
-    final imageUrls = imagesDynamic.map((e) => e.toString()).toList();
+  //   final product = _selectedProduct!;
+  //   // images is already an array of URLs, so just cast it
+  //   final List<dynamic> imagesDynamic = product['images'];
+  //   final imageUrls = imagesDynamic.map((e) => e.toString()).toList();
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (imageUrls.isNotEmpty)
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
-              child: Image.network(
-                imageUrls[0],
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: 250,
-              ),
-            ),
-          const SizedBox(height: 16),
-          Text(
-            product['title'] ?? 'No Title',
-            style: const TextStyle(fontWeight: FontWeight.normal, fontSize: 20),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '${product['price'] ?? 'N/A'} SAR',
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.green,
-              fontSize: 18,
-            ),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _deselectProduct,
-            child: const Text('Back to Products'),
-          ),
-        ],
-      ),
-    );
-  }
+  //   return SingleChildScrollView(
+  //     padding: const EdgeInsets.all(16.0),
+  //     child: Column(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         if (imageUrls.isNotEmpty)
+  //           ClipRRect(
+  //             borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+  //             child: Image.network(
+  //               imageUrls[0],
+  //               fit: BoxFit.cover,
+  //               width: double.infinity,
+  //               height: 250,
+  //             ),
+  //           ),
+  //         const SizedBox(height: 16),
+  //         Text(
+  //           product['title'] ?? 'No Title',
+  //           style: const TextStyle(fontWeight: FontWeight.normal, fontSize: 20),
+  //         ),
+  //         const SizedBox(height: 8),
+  //         Text(
+  //           '${product['price'] ?? 'N/A'} SAR',
+  //           style: const TextStyle(
+  //             fontWeight: FontWeight.bold,
+  //             color: Colors.green,
+  //             fontSize: 18,
+  //           ),
+  //         ),
+  //         const SizedBox(height: 16),
+  //         ElevatedButton(
+  //           onPressed: _deselectProduct,
+  //           child: const Text('Back to Products'),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 }
 
 class ProductCard extends StatelessWidget {
