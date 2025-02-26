@@ -303,6 +303,31 @@ class _WishlistPageState extends State<WishlistPage> {
           ),
         ],
       ),
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: const Color.fromARGB(255, 96, 95, 95),
+        unselectedItemColor: Colors.grey,
+        currentIndex: 3,
+        onTap: (index) {
+          if (index == 0) {
+            Navigator.pushReplacement(context,
+                MaterialPageRoute(builder: (context) => ProductsPage()));
+          } else if (index == 4) {
+            Navigator.pushReplacement(context,
+                MaterialPageRoute(builder: (context) => SettingsPage()));
+          }
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
+          BottomNavigationBarItem(icon: Icon(Icons.search), label: "Search"),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.shopping_cart), label: "My Cart"),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.favorite), label: "Wishlist"),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.settings), label: "Settings"),
+        ],
+      ),
     );
   }
 }
