@@ -448,68 +448,73 @@ void _NavToDetialsPage() {
       //Theme.of(context).colorScheme.surface
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Circular Account Image
-            CircleAvatar(
-              radius: 16, // Adjust size as needed
-              // backgroundImage: AssetImage('assets/profile.jpg'), // Replace with the actual image path
-            ),
-            const SizedBox(width: 10), // Space between avatar and logo
-            // Centered Logo
-            Expanded(
-              child: Image.asset(
-                'assets/AuraLogo.png',
-                scale: 5,
-                // fit: BoxFit.contain,
+  backgroundColor: Colors.white,
+  // Fix for color change when scrolling
+  scrolledUnderElevation: 0,
+  elevation: 0,
+  // Fix for back arrow
+  automaticallyImplyLeading: false,
+  title: Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      // Circular Account Image
+      CircleAvatar(
+        radius: 16, // Adjust size as needed
+        // backgroundImage: AssetImage('assets/profile.jpg'), // Replace with the actual image path
+      ),
+      const SizedBox(width: 10), // Space between avatar and logo
+      // Centered Logo
+      Expanded(
+        child: Image.asset(
+          'assets/AuraLogo.png',
+          scale: 5,
+          // fit: BoxFit.contain,
+        ),
+      ),
+    ],
+  ),
+  centerTitle: true, // Ensures title is centered
+  actions: [
+    IconButton(
+      icon: Stack(
+        alignment: Alignment.center,
+        children: [
+          Transform.translate(
+            offset: const Offset(3, 3), // Shadow effect
+            child: Container(
+              width: 20, // Reduced size to fit
+              height: 20,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: Colors.grey.shade400,
+                  width: 2,
+                ),
               ),
             ),
-          ],
-        ),
-        centerTitle: true, // Ensures title is centered
-        actions: [
-          IconButton(
-            icon: Stack(
-              alignment: Alignment.center,
-              children: [
-                Transform.translate(
-                  offset: const Offset(3, 3), // Shadow effect
-                  child: Container(
-                    width: 20, // Reduced size to fit
-                    height: 20,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: Colors.grey.shade400,
-                        width: 2,
-                      ),
-                    ),
-                  ),
-                ),
-                Container(
-                  width: 20, // Reduced size to fit
-                  height: 20,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: const Color.fromARGB(255, 0, 0, 0),
-                      width: 2,
-                    ),
-                  ),
-                ),
-              ],
+          ),
+          Container(
+            width: 20, // Reduced size to fit
+            height: 20,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: const Color.fromARGB(255, 0, 0, 0),
+                width: 2,
+              ),
             ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SwipeModePage()),
-              );
-            },
           ),
         ],
       ),
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const SwipeModePage()),
+        );
+      },
+    ),
+  ],
+),
 
       body: Column(
         children: [
