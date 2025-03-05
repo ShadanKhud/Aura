@@ -137,6 +137,23 @@ void _NavToDetialsPage() {
     });
   }
 
+Set<String> _wishlistItems = {};
+
+Future<void> _loadWishlist() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
+
+  final snapshot = await FirebaseFirestore.instance
+      .collection('customers')
+      .doc(user.uid)
+      .collection('wishlist')
+      .get();
+
+  setState(() {
+    _wishlistItems = snapshot.docs.map((doc) => doc.id).toSet();
+  });
+}
+
 // First, add these state variables to your _ProductsPageState class:
   String _currentSort = 'recommended';
   Map<String, dynamic> _filters = {
@@ -409,38 +426,47 @@ void _NavToDetialsPage() {
   }
 
   // Add to wishlist
-  Future<void> _addToWishlist(DocumentSnapshot productSnapshot) async {
-    try {
-      // Get current user ID
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
+Future<void> _addToWishlist(DocumentSnapshot productSnapshot) async {
+  try {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-      final userId = user.uid;
-      final productId = productSnapshot.id;
-      // or if you prefer the "Item_id" from your doc:
-      // final productId = productSnapshot['Item_id'];
+    final userId = user.uid;
+    final productId = productSnapshot.id;
 
-      // Add the product to the user's wishlist subcollection
-      await FirebaseFirestore.instance
-          .collection('customers')
-          .doc(userId)
-          .collection('wishlist')
-          .doc(productId)
-          .set({
+    final docRef = FirebaseFirestore.instance
+        .collection('customers')
+        .doc(userId)
+        .collection('wishlist')
+        .doc(productId);
+
+    final doc = await docRef.get();
+
+    if (doc.exists) {
+      await docRef.delete();
+      setState(() {
+        _wishlistItems.remove(productId);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Removed from wishlist.')),
+      );
+    } else {
+      await docRef.set({
         'productId': productId,
         'addedAt': FieldValue.serverTimestamp(),
       });
-
+      setState(() {
+        _wishlistItems.add(productId);
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Product added to your wishlist!')),
-      );
-    } catch (e) {
-      print("Error adding product to wishlist: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error adding product to wishlist.')),
+        const SnackBar(content: Text('Added to wishlist!')),
       );
     }
+  } catch (e) {
+    print("Error updating wishlist: $e");
   }
+}
+
 
   @override
   Widget build(BuildContext context) {

@@ -1,12 +1,18 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter_stripe/flutter_stripe.dart';
+import 'package:flutter/services.dart';
 
 class AddCardPage extends StatefulWidget {
   @override
   _AddCardPageState createState() => _AddCardPageState();
 }
+
+bool _cardComplete = false;
+final String userId = FirebaseAuth.instance.currentUser!.uid;
 
 class _AddCardPageState extends State<AddCardPage> {
   final _formKey = GlobalKey<FormState>();
@@ -16,7 +22,6 @@ class _AddCardPageState extends State<AddCardPage> {
   final TextEditingController _cvvController = TextEditingController();
   String cardType = "Visa";
 
-  // Validate Card Number using Luhn Algorithm
   bool _validateCardNumber(String number) {
     number = number.replaceAll(RegExp(r"\s+"), "");
     if (number.length < 13 || number.length > 19) return false;
@@ -35,57 +40,84 @@ class _AddCardPageState extends State<AddCardPage> {
     return (sum % 10 == 0);
   }
 
-  // Send card details to the backend server.js for Stripe
   Future<void> _addPaymentMethod() async {
-    if (_formKey.currentState!.validate()) {
-      if (!_validateCardNumber(_cardNumberController.text)) {
+    try {
+      if (!_cardComplete) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Invalid card number!")),
+          SnackBar(content: Text("Card details not complete!")),
         );
         return;
       }
 
-      try {
-        var response = await http.post(
-          Uri.parse('http//192.168.100.149:5000/add-card'),
-          headers: {"Content-Type": "application/json"},
-          body: jsonEncode({
-            'card_number': _cardNumberController.text.replaceAll(" ", ""),
-            'exp_date': _expDateController.text,
-            'cvv': _cvvController.text,
-            'name': _nameController.text,
-          }),
-        );
+      // Step 1: Create a Stripe payment method
+      final paymentMethod = await Stripe.instance.createPaymentMethod(
+        params: PaymentMethodParams.card(
+          paymentMethodData: PaymentMethodData(
+            billingDetails: BillingDetails(
+              name: _nameController.text,
+            ),
+          ),
+        ),
+      );
 
-        var responseData = jsonDecode(response.body);
-        if (response.statusCode == 200) {
-          FirebaseFirestore.instance.collection('cards').add({
-            'cardNumber': _cardNumberController.text,
-            'name': _nameController.text,
-            'expDate': _expDateController.text,
-            'type': cardType,
-            'last4': _cardNumberController.text.substring(_cardNumberController.text.length - 4),
+      // Step 2: Check if user already has a Stripe customerId
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+
+      if (userDoc.exists) {
+        Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+
+        // Check if the user already has a stripeCustomerId
+        if (!userData.containsKey('stripeCustomerId')) {
+          // If no stripeCustomerId exists, create a new Stripe customer
+          final customerResponse = await http.post(
+            Uri.parse('https://api.stripe.com/v1/customers'),
+            headers: {
+              'Authorization': 'Bearer sk_test_51Qrl4ARth5SQH9HL6u9t5ryvllJyPSpGVtTFt3xY4US1tki0kIvdCiRnkSO3BHGWIMI6I4zImWk5nsndcreUrfJz004vj2yoQM',  // Replace with your secret key
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: {
+              'email': FirebaseAuth.instance.currentUser!.email ?? '',
+            },
+          );
+
+          final customerData = json.decode(customerResponse.body);
+          final stripeCustomerId = customerData['id'];
+
+          // Step 3: Save stripeCustomerId in Firestore (users collection)
+          await FirebaseFirestore.instance.collection('users').doc(userId).update({
+            'stripeCustomerId': stripeCustomerId,
           });
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Card added successfully!")),
-          );
-          Navigator.pop(context);
+          print('Stripe customer created and stripeCustomerId saved: $stripeCustomerId');
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(responseData['error'] ?? "Error adding card.")),
-          );
+          print('Stripe customer already exists with id: ${userData['stripeCustomerId']}');
         }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: $e")),
-        );
+      } else {
+        print("User document does not exist.");
       }
+
+      // Step 4: Save card details in Firestore (cards collection)
+      await FirebaseFirestore.instance.collection('cards').add({
+        'customerId': userId,
+        'name': _nameController.text,
+        'type': cardType,
+        'paymentMethodId': paymentMethod.id,
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Card added successfully!")),
+      );
+
+      Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
     }
   }
 
   Widget _buildTextField(String label, String hint, TextEditingController controller,
-      {TextInputType keyboardType = TextInputType.text, bool obscureText = false, int? maxLength}) {
+      {TextInputType keyboardType = TextInputType.text, bool obscureText = false, int? maxLength, List<TextInputFormatter>? inputFormatters}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextFormField(
@@ -93,6 +125,7 @@ class _AddCardPageState extends State<AddCardPage> {
         keyboardType: keyboardType,
         maxLength: maxLength,
         obscureText: obscureText,
+        inputFormatters: inputFormatters,
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
@@ -119,10 +152,18 @@ class _AddCardPageState extends State<AddCardPage> {
           key: _formKey,
           child: Column(
             children: [
-              _buildTextField("Card Number *", "4111 1111 1111 1111", _cardNumberController, keyboardType: TextInputType.number, maxLength: 19),
               _buildTextField("Name on card", "Enter name on the card", _nameController),
-              _buildTextField("Expiration Date (MM/YY) *", "MM/YY", _expDateController, keyboardType: TextInputType.datetime, maxLength: 5),
-              _buildTextField("CVV *", "123", _cvvController, keyboardType: TextInputType.number, maxLength: 3, obscureText: true),
+              // Stripe's secure card input field
+              CardField(
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onCardChanged: (card) {
+                  setState(() {
+                    _cardComplete = card?.complete ?? false;
+                  });
+                },
+              ),
               SizedBox(height: 20),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
@@ -136,6 +177,20 @@ class _AddCardPageState extends State<AddCardPage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _DateTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    var text = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (text.length > 2) {
+      text = '${text.substring(0, 2)}/${text.substring(2)}';
+    }
+    return newValue.copyWith(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
     );
   }
 }
