@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
-import 'dart:convert';
+import 'package:share_plus/share_plus.dart'; // For sharing feature
 
 class ItemDetailsPage extends StatefulWidget {
   final Map<String, dynamic> itemDetails;
@@ -21,36 +20,14 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
   Widget build(BuildContext context) {
     final item = widget.itemDetails;
 
-    // Handle image URLs properly
-    String imagesString = item['images'] ?? '[]';
-
-    // Ensure correct JSON format (replace single quotes with double quotes)
-    imagesString = imagesString.replaceAll("'", '"');
-
-    // Try decoding the string into a list. If any error occurs, fallback to an empty list.
-    List<String> imageUrls = [];
-    try {
-      imageUrls = List<String>.from(jsonDecode(imagesString));
-    } catch (e) {
-      print("Error decoding image URLs: $e");
-      // Fallback to an empty list if decoding fails
-      imageUrls = [];
-    }
-
-    // Debug the parsed image URLs
-    print('Decoded Image URLs: $imageUrls');
-
-    // Handle 'reviews' being null, default to an empty list
-    List reviews = item['reviews'] ?? [];
-
     return Scaffold(
       appBar: AppBar(
-        title: Text(item['name'] ?? 'Item Details'),
+        title: Text(item['title'] ?? 'Item Details'),
         actions: [
           IconButton(
             icon: Icon(Icons.share),
             onPressed: () {
-              Share.share('Check out this item: ${item['name']}');
+              Share.share('Check out this item: ${item['title']}');
             },
           ),
         ],
@@ -61,65 +38,42 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Display images in a PageView
+              // Image Carousel
               SizedBox(
                 height: 250,
                 child: PageView.builder(
-                  itemCount: imageUrls.isNotEmpty ? imageUrls.length : 1,
+                  itemCount: (item['images'] as List).length,
                   itemBuilder: (context, index) {
-                    if (imageUrls.isNotEmpty) {
-                      print('Rendering image: ${imageUrls[index]}');
-                      return Image.network(
-                        imageUrls[index],
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) {
-                            return child;
-                          }
-                          return Center(
-                            child: CircularProgressIndicator(
-                              value: loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded /
-                                      (loadingProgress.expectedTotalBytes ?? 1)
-                                  : null,
-                            ),
-                          );
-                        },
-                        errorBuilder: (context, error, stackTrace) {
-                          return Center(child: Text('Error loading image'));
-                        },
-                      );
-                    } else {
-                      return Center(child: Text('No images available.'));
-                    }
+                    return Image.network(item['images'][index]);
                   },
                 ),
               ),
               const SizedBox(height: 16),
+              // Title and Price
               Text(
-                item['name'] ?? 'No name',
+                item['title'],
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Text(
                 "${item['price']} SAR",
-                style: TextStyle(fontSize: 18, color: Colors.black),
+                style: TextStyle(fontSize: 18, color: Colors.green),
               ),
               const SizedBox(height: 16),
+              // Colors and Sizes
               Row(
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<String>(
                       value: selectedColor,
                       hint: Text("Select Color"),
-                      items: (item['colors'] as List<dynamic>?)
-                              ?.map<DropdownMenuItem<String>>((color) {
-                            return DropdownMenuItem<String>(
-                              value: color as String,
-                              child: Text(color),
-                            );
-                          }).toList() ??
-                          [],
+                      items: (item['colors'] as List<dynamic>)
+                          .map<DropdownMenuItem<String>>((color) {
+                        return DropdownMenuItem<String>(
+                          value: color as String,
+                          child: Text(color),
+                        );
+                      }).toList(),
                       onChanged: (value) {
                         setState(() {
                           selectedColor = value;
@@ -132,14 +86,13 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                     child: DropdownButtonFormField<String>(
                       value: selectedSize,
                       hint: Text("Select Size"),
-                      items: (item['sizes'] as List<dynamic>?)
-                              ?.map<DropdownMenuItem<String>>((size) {
-                            return DropdownMenuItem<String>(
-                              value: size as String,
-                              child: Text(size),
-                            );
-                          }).toList() ??
-                          [],
+                      items: (item['sizes'] as List<dynamic>)
+                          .map<DropdownMenuItem<String>>((size) {
+                        return DropdownMenuItem<String>(
+                          value: size as String,
+                          child: Text(size),
+                        );
+                      }).toList(),
                       onChanged: (value) {
                         setState(() {
                           selectedSize = value;
@@ -150,6 +103,7 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                 ],
               ),
               const SizedBox(height: 16),
+              // Add to Cart Button
               ElevatedButton(
                 onPressed: () {
                   if (selectedColor == null || selectedSize == null) {
@@ -162,7 +116,7 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                   }
                   Navigator.pushNamed(
                     context,
-                    '/cart_folder/cartMainPage.dart',
+                    '/lib/cart_folder/cartMainPage.dart',
                     arguments: {
                       'itemId': item['item_id'],
                       'color': selectedColor,
@@ -185,7 +139,9 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              Text(item['description'] ?? 'No description available.'),
+              Text(
+                item['description'] ?? 'No description available.',
+              ),
               const SizedBox(height: 16),
               // Ratings and Reviews
               ExpansionTile(
@@ -196,7 +152,7 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text("Summary"),
-                        Text("${reviews.length} Reviews"),
+                        Text("${item['reviews'].length} Reviews"),
                       ],
                     ),
                   ),
@@ -220,10 +176,10 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                       },
                     ),
                   ),
-                  ...reviews.map<Widget>((review) {
+                  ...item['reviews'].map<Widget>((review) {
                     return ListTile(
-                      title: Text(review['reviewer_name'] ?? 'Anonymous'),
-                      subtitle: Text(review['comment'] ?? 'No comment'),
+                      title: Text(review['reviewer_name']),
+                      subtitle: Text(review['comment']),
                       trailing: Text("${review['rating']} ★"),
                     );
                   }).toList(),
