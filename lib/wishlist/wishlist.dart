@@ -23,73 +23,87 @@ class _WishlistPageState extends State<WishlistPage> {
   Future<List<Map<String, dynamic>>> fetchWishlistItems() async {
     try {
       User? user = FirebaseAuth.instance.currentUser;
-      if (user == null) return [];
+      if (user == null)
+        return []; // Return an empty list if no user is logged in
 
       String userId = user.uid;
+
       var wishlistSnapshot = await FirebaseFirestore.instance
           .collection('customers')
           .doc(userId)
           .collection('wishlist')
           .get();
 
-      if (wishlistSnapshot.docs.isEmpty) return [];
+      if (wishlistSnapshot.docs.isEmpty)
+        return []; // Return empty list if no items
 
       List<Map<String, dynamic>> wishlistData = [];
 
       for (var doc in wishlistSnapshot.docs) {
-        String? productId = doc['productId'];
+        var data = doc.data();
+        String? productId = data['productId'];
 
-        if (productId == null || productId.isEmpty) continue;
+        if (productId == null || productId.isEmpty) {
+          print('Skipping item with no productId');
+          continue;
+        }
+
+        print('Product ID: $productId'); // Debugging print to check productId
 
         var productDoc = await FirebaseFirestore.instance
-            .collection('products_asos')
+            .collection('clothes')
             .doc(productId)
             .get();
 
         if (productDoc.exists && productDoc.data() != null) {
           var productData = productDoc.data()!;
+          print(
+              'Product data: $productData'); // Debugging to verify the product data
 
-          // Handle image URLs properly
-          String imagesString = productData['images'] ?? '[]';
-          imagesString =
-              imagesString.replaceAll("'", '"'); // Ensure correct JSON format
-          List<String> imageUrls = List<String>.from(jsonDecode(imagesString));
+          // Safely check for null and cast to List<String> if available
+          List<String> imageUrls = (productData['images'] as List<dynamic>?)
+                  ?.map((e) => e.toString())
+                  .toList() ??
+              [];
 
-          // Handle price and remove "now" if present
           String price = productData['price'] ?? 'N/A';
           price = price.replaceAll("Now", "").trim();
 
           wishlistData.add({
             'docId': doc.id,
             'productId': productId,
-            'name': productData['name'] ?? 'No name',
+            'name': productData['title'] ?? 'No name',
             'price': price,
-            'image': imageUrls.isNotEmpty ? imageUrls[0] : '',
+            'image':
+                imageUrls.isNotEmpty ? imageUrls[0] : '', // Use first image
           });
+        } else {
+          print('No product found for productId: $productId');
         }
       }
 
       return wishlistData;
     } catch (e) {
       print('Error fetching wishlist items: $e');
-      return [];
+      return []; // Always return an empty list on error
     }
   }
 
   Future<void> removeFromWishlist(String docId) async {
     try {
       User? user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
+      if (user == null) return; // If no user is logged in, don't proceed
 
       await FirebaseFirestore.instance
-          .collection('customers')
-          .doc(user.uid)
-          .collection('wishlist')
-          .doc(docId)
+          .collection('customers') // Use the 'customers' collection
+          .doc(user.uid) // Document for the logged-in user
+          .collection('wishlist') // The 'wishlist' sub-collection
+          .doc(docId) // Document ID of the item to remove
           .delete();
 
       setState(() {
-        wishlistItems = fetchWishlistItems();
+        wishlistItems =
+            fetchWishlistItems(); // Refresh the wishlist after removal
       });
     } catch (e) {
       print("Error removing item: $e");
@@ -112,7 +126,7 @@ class _WishlistPageState extends State<WishlistPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'Wishlist',
                   style: TextStyle(
                     color: Colors.white,
@@ -127,11 +141,11 @@ class _WishlistPageState extends State<WishlistPage> {
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.only(
+                borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(25),
                   topRight: Radius.circular(25),
                 ),
-                boxShadow: [
+                boxShadow: const [
                   BoxShadow(
                     color: Colors.black26,
                     blurRadius: 6,
@@ -140,6 +154,7 @@ class _WishlistPageState extends State<WishlistPage> {
                 ],
               ),
               child: FutureBuilder<List<Map<String, dynamic>>>(
+                // FutureBuilder to display fetched data
                 future: wishlistItems,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -151,16 +166,19 @@ class _WishlistPageState extends State<WishlistPage> {
                   if (!snapshot.hasData || snapshot.data!.isEmpty) {
                     return const Center(child: Text('No items in wishlist.'));
                   }
+
                   var items = snapshot.data!;
 
                   return ListView.builder(
-                    padding: EdgeInsets.all(10),
+                    padding: const EdgeInsets.all(10),
                     itemCount: items.length,
                     itemBuilder: (context, index) {
                       final item = items[index];
 
                       return GestureDetector(
                         onTap: () {
+                          print(
+                              'Navigating to details page for: ${item['name']}');
                           Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -175,8 +193,8 @@ class _WishlistPageState extends State<WishlistPage> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          margin:
-                              EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                          margin: const EdgeInsets.symmetric(
+                              vertical: 8, horizontal: 12),
                           elevation: 1,
                           child: Container(
                             decoration: BoxDecoration(
@@ -191,29 +209,31 @@ class _WishlistPageState extends State<WishlistPage> {
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(10),
-                                    child: Image.network(
-                                      item['image'],
-                                      height: 120,
-                                      width: 100,
-                                      fit: BoxFit.cover,
-                                      loadingBuilder:
-                                          (context, child, loadingProgress) {
-                                        if (loadingProgress == null)
-                                          return child;
-                                        return Center(
-                                            child: CircularProgressIndicator());
-                                      },
-                                      errorBuilder:
-                                          (context, error, stackTrace) {
-                                        return Center(
-                                            child: Icon(Icons.broken_image,
-                                                size: 50));
-                                      },
+                                  if (item['image'].isNotEmpty)
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Image.network(
+                                        item['image'],
+                                        height: 120,
+                                        width: 100,
+                                        fit: BoxFit.cover,
+                                        loadingBuilder:
+                                            (context, child, loadingProgress) {
+                                          if (loadingProgress == null)
+                                            return child;
+                                          return const Center(
+                                              child:
+                                                  CircularProgressIndicator());
+                                        },
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                          return const Center(
+                                              child: Icon(Icons.broken_image,
+                                                  size: 50));
+                                        },
+                                      ),
                                     ),
-                                  ),
-                                  SizedBox(width: 10),
+                                  const SizedBox(width: 10),
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment:
@@ -223,15 +243,19 @@ class _WishlistPageState extends State<WishlistPage> {
                                           mainAxisAlignment:
                                               MainAxisAlignment.spaceBetween,
                                           children: [
-                                            Text(
-                                              truncateTitle(item['name']),
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 16,
+                                            Expanded(
+                                              child: Text(
+                                                truncateTitle(item['name']),
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                                maxLines: 1,
                                               ),
                                             ),
                                             IconButton(
-                                              icon: Icon(Icons.favorite,
+                                              icon: const Icon(Icons.favorite,
                                                   color: Colors.red),
                                               onPressed: () =>
                                                   removeFromWishlist(
@@ -239,14 +263,14 @@ class _WishlistPageState extends State<WishlistPage> {
                                             ),
                                           ],
                                         ),
-                                        SizedBox(height: 10),
+                                        const SizedBox(height: 10),
                                         Row(
                                           mainAxisAlignment:
                                               MainAxisAlignment.spaceBetween,
                                           children: [
                                             Text(
-                                              "\$${item['price']}",
-                                              style: TextStyle(
+                                              "${item['price']} SAR",
+                                              style: const TextStyle(
                                                 fontSize: 16,
                                                 fontWeight: FontWeight.bold,
                                                 color: Colors.black,
@@ -255,33 +279,24 @@ class _WishlistPageState extends State<WishlistPage> {
                                             OutlinedButton(
                                               onPressed: () {
                                                 // Move to cart functionality
-                                                // Call the function to move the item to the cart, for example:
-                                                // moveToCart(item['productId']);
                                               },
                                               style: OutlinedButton.styleFrom(
-                                                foregroundColor: Colors
-                                                    .black, // Text color (black)
+                                                foregroundColor: Colors.black,
                                                 side: const BorderSide(
-                                                  color: Colors
-                                                      .grey, // Border color (black)
-                                                ),
+                                                    color: Colors.grey),
                                                 shape: RoundedRectangleBorder(
                                                   borderRadius:
                                                       BorderRadius.circular(
-                                                          8.0), // Corner radius
+                                                          8.0),
                                                 ),
-                                                padding: const EdgeInsets
-                                                    .symmetric(
-                                                    vertical: 8.0,
-                                                    horizontal:
-                                                        12.0), // Adjust padding for smaller size
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 8.0,
+                                                        horizontal: 12.0),
                                               ),
                                               child: const Text(
                                                 "Move to Cart",
-                                                style: TextStyle(
-                                                  fontSize:
-                                                      16, // Smaller font size (optional, adjust as needed)
-                                                ),
+                                                style: TextStyle(fontSize: 16),
                                               ),
                                             ),
                                           ],
