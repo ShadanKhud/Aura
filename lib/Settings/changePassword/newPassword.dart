@@ -27,9 +27,7 @@ class _NewPasswordPageState extends State<NewPasswordPage> {
   }
 
   Future<void> _updatePassword() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     String newPassword = _newPasswordController.text.trim();
     String confirmPassword = _confirmPasswordController.text.trim();
@@ -37,25 +35,19 @@ class _NewPasswordPageState extends State<NewPasswordPage> {
 
     if (newPassword.isEmpty || confirmPassword.isEmpty) {
       _showErrorDialog("Please fill in all mandatory fields.");
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
       return;
     }
 
     if (!_isPasswordValid) {
       _showErrorDialog("Password does not meet the required criteria.");
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
       return;
     }
 
     if (newPassword != confirmPassword) {
       _showErrorDialog("Passwords do not match.");
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
       return;
     }
 
@@ -69,9 +61,7 @@ class _NewPasswordPageState extends State<NewPasswordPage> {
       }
     }
 
-    setState(() {
-      _isLoading = false;
-    });
+    setState(() => _isLoading = false);
   }
 
   void _showErrorDialog(String message) {
@@ -109,6 +99,7 @@ class _NewPasswordPageState extends State<NewPasswordPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: const Text("Change Password"),
         backgroundColor: Colors.white,
@@ -135,28 +126,20 @@ class _NewPasswordPageState extends State<NewPasswordPage> {
             ),
             const SizedBox(height: 20),
 
-            // New Password Field
-            TextField(
+            // **New Password Field**
+            _buildTextField(
+              label: "Password",
               controller: _newPasswordController,
-              obscureText: !_isPasswordVisible,
+              isMandatory: true,
+              isObscure: !_isPasswordVisible,
               onChanged: _validatePassword,
-              decoration: InputDecoration(
-                labelText: "Password *",
-                border: OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: Icon(_isPasswordVisible
-                      ? Icons.visibility
-                      : Icons.visibility_off),
-                  onPressed: () {
-                    setState(() {
-                      _isPasswordVisible = !_isPasswordVisible;
-                    });
-                  },
-                ),
-              ),
+              onToggleVisibility: () {
+                setState(() => _isPasswordVisible = !_isPasswordVisible);
+              },
+              isPasswordField: true,
             ),
 
-            // Password Validation Rules
+            // **Password Validation Rules**
             const SizedBox(height: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,29 +161,22 @@ class _NewPasswordPageState extends State<NewPasswordPage> {
 
             const SizedBox(height: 20),
 
-            // Confirm Password Field
-            TextField(
+            // **Confirm Password Field**
+            _buildTextField(
+              label: "Confirm Password",
               controller: _confirmPasswordController,
-              obscureText: !_isConfirmPasswordVisible,
-              decoration: InputDecoration(
-                labelText: "Confirm Password *",
-                border: OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: Icon(_isConfirmPasswordVisible
-                      ? Icons.visibility
-                      : Icons.visibility_off),
-                  onPressed: () {
-                    setState(() {
-                      _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
-                    });
-                  },
-                ),
-              ),
+              isMandatory: true,
+              isObscure: !_isConfirmPasswordVisible,
+              onToggleVisibility: () {
+                setState(() =>
+                    _isConfirmPasswordVisible = !_isConfirmPasswordVisible);
+              },
+              isPasswordField: true,
             ),
 
             const SizedBox(height: 30),
 
-            // Save Button
+            // **Save Button**
             ElevatedButton(
               onPressed: _isLoading ? null : _updatePassword,
               style: ElevatedButton.styleFrom(
@@ -210,7 +186,7 @@ class _NewPasswordPageState extends State<NewPasswordPage> {
                     borderRadius: BorderRadius.circular(8)),
               ),
               child: _isLoading
-                  ? CircularProgressIndicator(color: Colors.white)
+                  ? const CircularProgressIndicator(color: Colors.white)
                   : const Center(
                       child: Text("Save",
                           style: TextStyle(fontSize: 18, color: Colors.white)),
@@ -222,7 +198,61 @@ class _NewPasswordPageState extends State<NewPasswordPage> {
     );
   }
 
-  // Password validation indicators
+  /// ✅ **Reusable Input Field with Red Asterisk**
+  Widget _buildTextField({
+    required String label,
+    required TextEditingController controller,
+    bool isMandatory = false,
+    bool isObscure = false,
+    bool isPasswordField = false,
+    Function(String)? onChanged,
+    VoidCallback? onToggleVisibility,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: isObscure,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        label: _buildLabelWithAsterisk(label, isMandatory),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8.0),
+          borderSide: const BorderSide(color: Colors.red),
+        ),
+        suffixIcon: isPasswordField
+            ? IconButton(
+                icon: Icon(isObscure ? Icons.visibility_off : Icons.visibility),
+                onPressed: onToggleVisibility,
+              )
+            : null,
+      ),
+    );
+  }
+
+  /// ✅ **Method to Add Red Asterisk for Required Fields**
+  Widget _buildLabelWithAsterisk(String label, bool isMandatory) {
+    return Row(
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.w500,
+            color: Colors.black,
+          ),
+        ),
+        if (isMandatory)
+          const Text(
+            " *",
+            style: TextStyle(
+              color: Color(0xFFEE4D4D), // Red Asterisk
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// ✅ **Password Validation Indicators**
   Widget _buildValidationIndicator(String text, bool isValid) {
     return Row(
       children: [
@@ -232,11 +262,8 @@ class _NewPasswordPageState extends State<NewPasswordPage> {
           color: isValid ? Colors.green : Colors.grey,
         ),
         const SizedBox(width: 5),
-        Text(
-          text,
-          style: TextStyle(
-              color: isValid ? Colors.green : Colors.grey, fontSize: 14),
-        ),
+        Text(text,
+            style: TextStyle(color: isValid ? Colors.green : Colors.grey)),
       ],
     );
   }

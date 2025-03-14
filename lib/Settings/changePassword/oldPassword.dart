@@ -13,9 +13,7 @@ class _OldPasswordPageState extends State<OldPasswordPage> {
   bool _isLoading = false;
 
   Future<void> _verifyOldPassword() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     User? user = FirebaseAuth.instance.currentUser;
     String password = _passwordController.text.trim();
@@ -29,25 +27,24 @@ class _OldPasswordPageState extends State<OldPasswordPage> {
       try {
         await user.reauthenticateWithCredential(credential);
 
-        // Navigate to New Password Page if verification succeeds
+        // ✅ Navigate to New Password Page if verification succeeds
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => NewPasswordPage()),
         );
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Incorrect password. Please try again.")),
+          const SnackBar(
+              content: Text("Incorrect password. Please try again.")),
         );
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Please enter your old password.")),
+        const SnackBar(content: Text("Please enter your old password.")),
       );
     }
 
-    setState(() {
-      _isLoading = false;
-    });
+    setState(() => _isLoading = false);
   }
 
   @override
@@ -74,34 +71,25 @@ class _OldPasswordPageState extends State<OldPasswordPage> {
             ),
             const SizedBox(height: 10),
             const Text(
-              "Enter old password to change the password.",
+              "Enter your old password to change your password.",
               style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const SizedBox(height: 20),
 
-            // Password Field
-            TextField(
+            // **Old Password Field**
+            _buildTextField(
+              label: "Password",
               controller: _passwordController,
-              obscureText: !_isPasswordVisible,
-              decoration: InputDecoration(
-                labelText: "Password *",
-                border: OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: Icon(_isPasswordVisible
-                      ? Icons.visibility
-                      : Icons.visibility_off),
-                  onPressed: () {
-                    setState(() {
-                      _isPasswordVisible = !_isPasswordVisible;
-                    });
-                  },
-                ),
-              ),
+              isMandatory: true,
+              isObscure: !_isPasswordVisible,
+              onToggleVisibility: () {
+                setState(() => _isPasswordVisible = !_isPasswordVisible);
+              },
             ),
 
             const SizedBox(height: 30),
 
-            // Continue Button
+            // **Continue Button**
             ElevatedButton(
               onPressed: _isLoading ? null : _verifyOldPassword,
               style: ElevatedButton.styleFrom(
@@ -111,7 +99,7 @@ class _OldPasswordPageState extends State<OldPasswordPage> {
                     borderRadius: BorderRadius.circular(8)),
               ),
               child: _isLoading
-                  ? CircularProgressIndicator(color: Colors.white)
+                  ? const CircularProgressIndicator(color: Colors.white)
                   : const Center(
                       child: Text(
                         "Continue",
@@ -122,6 +110,55 @@ class _OldPasswordPageState extends State<OldPasswordPage> {
           ],
         ),
       ),
+    );
+  }
+
+  /// ✅ **Reusable Input Field with Red Asterisk**
+  Widget _buildTextField({
+    required String label,
+    required TextEditingController controller,
+    bool isMandatory = false,
+    bool isObscure = false,
+    VoidCallback? onToggleVisibility,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: isObscure,
+      decoration: InputDecoration(
+        label: _buildLabelWithAsterisk(label, isMandatory),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8.0),
+          borderSide: const BorderSide(color: Colors.red),
+        ),
+        suffixIcon: IconButton(
+          icon: Icon(isObscure ? Icons.visibility_off : Icons.visibility),
+          onPressed: onToggleVisibility,
+        ),
+      ),
+    );
+  }
+
+  /// ✅ **Method to Add Red Asterisk for Required Fields**
+  Widget _buildLabelWithAsterisk(String label, bool isMandatory) {
+    return Row(
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.w500,
+            color: Colors.black,
+          ),
+        ),
+        if (isMandatory)
+          const Text(
+            " *",
+            style: TextStyle(
+              color: Color(0xFFEE4D4D), // Red Asterisk
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+      ],
     );
   }
 }

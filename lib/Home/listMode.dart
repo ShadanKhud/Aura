@@ -121,38 +121,40 @@ class _ProductsPageState extends State<ProductsPage> {
       _selectedProduct = product;
     });
   }
-void _NavToDetialsPage() {
-  if (_selectedProduct != null) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ItemDetailsPage(itemDetails: _selectedProduct!),
-      ),
-    );
+
+  void _NavToDetialsPage() {
+    if (_selectedProduct != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ItemDetailsPage(itemDetails: _selectedProduct!),
+        ),
+      );
+    }
   }
-}
+
   void _deselectProduct() {
     setState(() {
       _selectedProduct = null;
     });
   }
 
-Set<String> _wishlistItems = {};
+  Set<String> _wishlistItems = {};
 
-Future<void> _loadWishlist() async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) return;
+  Future<void> _loadWishlist() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-  final snapshot = await FirebaseFirestore.instance
-      .collection('customers')
-      .doc(user.uid)
-      .collection('wishlist')
-      .get();
+    final snapshot = await FirebaseFirestore.instance
+        .collection('customers')
+        .doc(user.uid)
+        .collection('wishlist')
+        .get();
 
-  setState(() {
-    _wishlistItems = snapshot.docs.map((doc) => doc.id).toSet();
-  });
-}
+    setState(() {
+      _wishlistItems = snapshot.docs.map((doc) => doc.id).toSet();
+    });
+  }
 
 // First, add these state variables to your _ProductsPageState class:
   String _currentSort = 'recommended';
@@ -426,47 +428,46 @@ Future<void> _loadWishlist() async {
   }
 
   // Add to wishlist
-Future<void> _addToWishlist(DocumentSnapshot productSnapshot) async {
-  try {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+  Future<void> _addToWishlist(DocumentSnapshot productSnapshot) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
 
-    final userId = user.uid;
-    final productId = productSnapshot.id;
+      final userId = user.uid;
+      final productId = productSnapshot.id;
 
-    final docRef = FirebaseFirestore.instance
-        .collection('customers')
-        .doc(userId)
-        .collection('wishlist')
-        .doc(productId);
+      final docRef = FirebaseFirestore.instance
+          .collection('customers')
+          .doc(userId)
+          .collection('wishlist')
+          .doc(productId);
 
-    final doc = await docRef.get();
+      final doc = await docRef.get();
 
-    if (doc.exists) {
-      await docRef.delete();
-      setState(() {
-        _wishlistItems.remove(productId);
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Removed from wishlist.')),
-      );
-    } else {
-      await docRef.set({
-        'productId': productId,
-        'addedAt': FieldValue.serverTimestamp(),
-      });
-      setState(() {
-        _wishlistItems.add(productId);
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Added to wishlist!')),
-      );
+      if (doc.exists) {
+        await docRef.delete();
+        setState(() {
+          _wishlistItems.remove(productId);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Removed from wishlist.')),
+        );
+      } else {
+        await docRef.set({
+          'productId': productId,
+          'addedAt': FieldValue.serverTimestamp(),
+        });
+        setState(() {
+          _wishlistItems.add(productId);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Added to wishlist!')),
+        );
+      }
+    } catch (e) {
+      print("Error updating wishlist: $e");
     }
-  } catch (e) {
-    print("Error updating wishlist: $e");
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -474,73 +475,44 @@ Future<void> _addToWishlist(DocumentSnapshot productSnapshot) async {
       //Theme.of(context).colorScheme.surface
       backgroundColor: Colors.white,
       appBar: AppBar(
-  backgroundColor: Colors.white,
-  // Fix for color change when scrolling
-  scrolledUnderElevation: 0,
-  elevation: 0,
-  // Fix for back arrow
-  automaticallyImplyLeading: false,
-  title: Row(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: [
-      // Circular Account Image
-      CircleAvatar(
-        radius: 16, // Adjust size as needed
-        // backgroundImage: AssetImage('assets/profile.jpg'), // Replace with the actual image path
-      ),
-      const SizedBox(width: 10), // Space between avatar and logo
-      // Centered Logo
-      Expanded(
-        child: Image.asset(
-          'assets/AuraLogo.png',
-          scale: 5,
-          // fit: BoxFit.contain,
+        backgroundColor: Colors.white,
+        // Fix for color change when scrolling
+        scrolledUnderElevation: 0,
+        elevation: 0,
+        // Fix for back arrow
+        automaticallyImplyLeading: false,
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Circular Account Image
+            CircleAvatar(
+              radius: 16, // Adjust size as needed
+              // backgroundImage: AssetImage('assets/profile.jpg'), // Replace with the actual image path
+            ),
+            const SizedBox(width: 10), // Space between avatar and logo
+            // Centered Logo
+            Expanded(
+              child: Image.asset(
+                'assets/AuraLogo.png',
+                scale: 5,
+                // fit: BoxFit.contain,
+              ),
+            ),
+          ],
         ),
-      ),
-    ],
-  ),
-  centerTitle: true, // Ensures title is centered
-  actions: [
-    IconButton(
-      icon: Stack(
-        alignment: Alignment.center,
-        children: [
-          Transform.translate(
-            offset: const Offset(3, 3), // Shadow effect
-            child: Container(
-              width: 20, // Reduced size to fit
-              height: 20,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: Colors.grey.shade400,
-                  width: 2,
-                ),
-              ),
-            ),
-          ),
-          Container(
-            width: 20, // Reduced size to fit
-            height: 20,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: const Color.fromARGB(255, 0, 0, 0),
-                width: 2,
-              ),
-            ),
+        centerTitle: true, // Ensures title is centered
+        actions: [
+          IconButton(
+            icon: Icon(Icons.swap_horiz),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SwipeModePage()),
+              );
+            },
           ),
         ],
       ),
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const SwipeModePage()),
-        );
-      },
-    ),
-  ],
-),
 
       body: Column(
         children: [
@@ -577,48 +549,52 @@ Future<void> _addToWishlist(DocumentSnapshot productSnapshot) async {
             ),
           ),
           Expanded(
-  child: (_isLoading && _documents.isEmpty)
-      ? const Center(child: CircularProgressIndicator())
-      : _documents.isEmpty
-          ? const Center(child: Text('No products found'))
-          : GridView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(8.0),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 10.0,
-                mainAxisSpacing: 5.0,
-                childAspectRatio: 0.65,
-              ),
-              itemCount: _documents.length,
-              itemBuilder: (context, index) {
-                final productSnapshot = _documents[index];
-                final product = productSnapshot.data() as Map<String, dynamic>;
+            child: (_isLoading && _documents.isEmpty)
+                ? const Center(child: CircularProgressIndicator())
+                : _documents.isEmpty
+                    ? const Center(child: Text('No products found'))
+                    : GridView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.all(8.0),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 10.0,
+                          mainAxisSpacing: 5.0,
+                          childAspectRatio: 0.65,
+                        ),
+                        itemCount: _documents.length,
+                        itemBuilder: (context, index) {
+                          final productSnapshot = _documents[index];
+                          final product =
+                              productSnapshot.data() as Map<String, dynamic>;
 
-                // Make sure images & price & title exist
-                if (product['images'] == null ||
-                    product['price'] == null ||
-                    product['title'] == null) {
-                  return const Center(
-                    child: Text('Product data is incomplete'),
-                  );
-                }
+                          // Make sure images & price & title exist
+                          if (product['images'] == null ||
+                              product['price'] == null ||
+                              product['title'] == null) {
+                            return const Center(
+                              child: Text('Product data is incomplete'),
+                            );
+                          }
 
-                return ProductCard(
-                  product: product,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ItemDetailsPage(itemDetails: product),
+                          return ProductCard(
+                            product: product,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      ItemDetailsPage(itemDetails: product),
+                                ),
+                              );
+                            },
+                            onHeartPressed: () =>
+                                _addToWishlist(productSnapshot),
+                          );
+                        },
                       ),
-                    );
-                  },
-                  onHeartPressed: () => _addToWishlist(productSnapshot),
-                );
-              },
-            ),
-),
+          ),
           // Show a small loading indicator at bottom if fetching more
           if (_isLoading && _selectedProduct == null)
             const Padding(

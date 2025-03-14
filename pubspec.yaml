@@ -39,7 +39,9 @@ dependencies:
   win32: ^5.5.3
   flutter_stripe: ^11.4.0
   flutter_card_swiper: ^7.0.2
-  stripe_sdk: ^4.0.0
+  stripe_sdk: 5.0.0
+  mailto: ^2.0.0
+  url_launcher: ^6.1.14
 
 
 
@@ -51,6 +53,7 @@ dependencies:
   google_sign_in: ^6.2.2
   country_state_city_picker: ^1.2.8
   country_picker: ^2.0.27
+  mailer: ^6.4.1
 
 dev_dependencies:
   flutter_test:

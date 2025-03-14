@@ -4,6 +4,7 @@ import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:aura_app/Settings/settings.dart';
 import 'package:aura_app/wishlist/wishlist.dart';
 import 'package:aura_app/Home/listMode.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SwipeModePage extends StatefulWidget {
   const SwipeModePage({Key? key}) : super(key: key);
@@ -17,170 +18,75 @@ class _SwipeModePageState extends State<SwipeModePage> {
   List<Map<String, dynamic>> products = [];
   DocumentSnapshot? lastDocument;
   bool isFetching = false;
+  Set<String> wishlistItems = {};
 
   @override
   void initState() {
     super.initState();
-    fetchProducts();
+    _loadWishlist();
+    _loadProducts();
   }
 
-  /// ✅ Improved Card Design matching your preference
-  Widget _buildProductCard(Map<String, dynamic> product, int index) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 8,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Stack(
-            children: [
-              // ✅ Product Image
-              Container(
-                width: double.infinity,
-                height: 500,
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(16),
-                  ),
-                  image: DecorationImage(
-                    image: NetworkImage(product['image']),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
+  ///  Fetch wishlist items from Firestore
+  Future<void> _loadWishlist() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-              // ✅ Colors List (Bottom Left, Vertical)
-              Positioned(
-                bottom: 10,
-                left: 10,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: product['colors']
-                      .map<Widget>(
-                        (color) => Container(
-                          width: 22,
-                          height: 22,
-                          margin: const EdgeInsets.only(bottom: 5),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: color,
-                            border: Border.all(color: Colors.white, width: 2),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                ),
-              ),
-            ],
-          ),
+    final snapshot = await FirebaseFirestore.instance
+        .collection('customers')
+        .doc(user.uid)
+        .collection('wishlist')
+        .get();
 
-          // ✅ Product Details Section (Fixed Height)
-          Container(
-            height: 90, // 🔥 Fixed Bottom Section Height
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(16),
-                bottomRight: Radius.circular(16),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // ✅ Title & Heart Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        product['title'],
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-
-                    // ✅ Like Button
-                    IconButton(
-                      icon: Icon(
-                        product['isFavorite']
-                            ? Icons.favorite_rounded
-                            : Icons.favorite_border_rounded,
-                        color: product['isFavorite']
-                            ? Colors.pink
-                            : const Color.fromARGB(255, 0, 0, 0),
-                        size: 28, // ✅ Bigger Heart Icon
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          products[index]['isFavorite'] =
-                              !products[index]['isFavorite'];
-                        });
-                      },
-                    ),
-                  ],
-                ),
-
-                // ✅ Price & Rating Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      product['price'],
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        Text(
-                          product['rating'].toStringAsFixed(1),
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(width: 5),
-                        Icon(
-                          product['rating'] >= 5
-                              ? Icons
-                                  .star // Full star if rating is 4.5 or higher
-                              : product['rating'] >= 0.1
-                                  ? Icons
-                                      .star_half // Half star if rating is between 0.5 and 4.4
-                                  : Icons
-                                      .star_border, // Empty star if rating is less than 0.5
-                          color: Colors.orange,
-                          size: 20,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+    setState(() {
+      wishlistItems = snapshot.docs.map((doc) => doc.id).toSet();
+    });
   }
 
-  /// ✅ Fetches products in batches of 6
-  Future<void> fetchProducts({int limit = 6}) async {
+  ///  Add or Remove from Wishlist
+  Future<void> _toggleWishlist(String productId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final docRef = FirebaseFirestore.instance
+        .collection('customers')
+        .doc(user.uid)
+        .collection('wishlist')
+        .doc(productId);
+
+    final doc = await docRef.get();
+
+    if (doc.exists) {
+      await docRef.delete();
+      setState(() {
+        wishlistItems.remove(productId);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Removed from wishlist.')),
+      );
+    } else {
+      await docRef.set({
+        'productId': productId,
+        'addedAt': FieldValue.serverTimestamp(),
+      });
+      setState(() {
+        wishlistItems.add(productId);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Added to wishlist!')),
+      );
+    }
+  }
+
+  ///  Fetches products in batches of 6
+  Future<void> _loadProducts({int limit = 6}) async {
     if (isFetching) return;
     isFetching = true;
 
     try {
       Query query = FirebaseFirestore.instance
           .collection('clothes')
-          .orderBy('title')
+          .orderBy('product_number')
           .limit(limit);
 
       if (lastDocument != null) {
@@ -200,14 +106,13 @@ class _SwipeModePageState extends State<SwipeModePage> {
         final data = doc.data() as Map<String, dynamic>;
 
         return {
-          'image': data['images'][0], // Use first image URL
-          'title': data['title'],
-          'price': '${data['price']} SAR',
+          'id': doc.id,
+          'image': (data['images'] as List<dynamic>).isNotEmpty
+              ? data['images'][0]
+              : 'https://via.placeholder.com/150', // Fallback image
+          'title': data['title'] ?? 'Unknown Title',
+          'price': data['price'] != null ? '${data['price']} SAR' : 'N/A',
           'rating': data['rating']?.toDouble() ?? 0.0,
-          'colors': (data['colors'] as List<dynamic>)
-              .map((colorName) => Color(_hexToColor(colorName)))
-              .toList(),
-          'isFavorite': false,
         };
       }).toList();
 
@@ -221,29 +126,11 @@ class _SwipeModePageState extends State<SwipeModePage> {
     }
   }
 
-  /// ✅ Converts Color Name to Hex Code
-  int _hexToColor(String colorName) {
-    Map<String, String> colorMap = {
-      "Black": "0xFF000000",
-      "Chocolate Fondant": "0xFF7B3F00",
-      "Hot Pink": "0xFFFF69B4",
-      "Ivory": "0xFFFFFFF0",
-      "Military Olive": "0xFF6F6F3F",
-      "Rose Dust": "0xFF9E5E6F",
-      "Ultramarine Green": "0xFF006B3C",
-      "Dark Purple": "0xFF301934",
-      "Navy": "0xFF000080",
-      "Praline": "0xFFAD6F69",
-      "Beige": "0xFFF5F5DC"
-    };
-    return int.parse(colorMap[colorName] ?? "0xFF808080");
-  }
-
   /// ✅ Loads more products when the last card is swiped
   bool _onSwipe(
       int previousIndex, int? currentIndex, CardSwiperDirection direction) {
     if (currentIndex == null || currentIndex >= products.length - 2) {
-      fetchProducts();
+      _loadProducts(); // Load more products when near the end
     }
     return true;
   }
@@ -251,7 +138,6 @@ class _SwipeModePageState extends State<SwipeModePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // ✅ App Bar Matching List Mode
       appBar: AppBar(
         backgroundColor: Colors.white,
         title: Row(
@@ -285,7 +171,6 @@ class _SwipeModePageState extends State<SwipeModePage> {
         ],
         automaticallyImplyLeading: false,
       ),
-
       body: Stack(
         alignment: Alignment.center,
         children: [
@@ -316,8 +201,6 @@ class _SwipeModePageState extends State<SwipeModePage> {
           ),
         ],
       ),
-
-      // ✅ Bottom Navigation Bar Matching List Mode
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         selectedItemColor: const Color.fromARGB(255, 96, 95, 95),
@@ -353,6 +236,72 @@ class _SwipeModePageState extends State<SwipeModePage> {
               icon: Icon(Icons.favorite), label: "Wishlist"),
           BottomNavigationBarItem(
               icon: Icon(Icons.settings), label: "Settings"),
+        ],
+      ),
+    );
+  }
+
+  ///  Product Card
+  Widget _buildProductCard(Map<String, dynamic> product, int index) {
+    final String productId = product['id'];
+    final bool isFavorite = wishlistItems.contains(productId);
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 8,
+      child: Column(
+        children: [
+          // Product Image
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            child: Image.network(
+              product['image'],
+              fit: BoxFit.cover,
+              height: 500,
+              width: double.infinity,
+            ),
+          ),
+          ListTile(
+            title: Text(product['title'], overflow: TextOverflow.ellipsis),
+            subtitle: Text(product['price']),
+            trailing: IconButton(
+              icon: Icon(
+                isFavorite
+                    ? Icons.favorite_rounded
+                    : Icons.favorite_border_rounded,
+                color: isFavorite
+                    ? Colors.pink
+                    : const Color.fromARGB(255, 53, 52, 52),
+              ),
+              onPressed: () => _toggleWishlist(productId),
+            ),
+          ),
+          Transform.translate(
+            offset: const Offset(-18, -20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(
+                  product['rating'].toStringAsFixed(1),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Icon(
+                  product['rating'] >= 5
+                      ? Icons.star // Full star if rating is 4.5 or higher
+                      : product['rating'] >= 0.1
+                          ? Icons
+                              .star_half // Half star if rating is between 0.5 and 4.4
+                          : Icons
+                              .star_border, // Empty star if rating is less than 0.5
+                  color: Colors.orange,
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

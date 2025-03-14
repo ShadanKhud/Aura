@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:aura_app/Home/homeList.dart';
 import 'package:aura_app/Settings/editInformation.dart';
 import 'package:aura_app/Sign_up_in/login.dart';
 import 'package:aura_app/Settings/changePassword/oldPassword.dart';
@@ -9,6 +8,8 @@ import 'package:aura_app/Settings//MyCreditCards/MyCreditCards.dart';
 import 'package:aura_app/Settings/manageMembers/manage_members2.dart';
 import 'package:aura_app/wishlist/wishlist.dart';
 import 'package:aura_app/Home/listMode.dart';
+import 'package:aura_app/Settings/deleteAccount.dart';
+import 'package:aura_app/Settings/supportRequest.dart';
 
 class SettingsPage extends StatelessWidget {
   @override
@@ -22,9 +23,16 @@ class SettingsPage extends StatelessWidget {
       body: Column(
         children: [
           /// Profile Header Section
+          /// Profile Header Section
           Container(
             color: const Color(0xFF614FE0),
-            padding: EdgeInsets.all(20),
+            padding: EdgeInsets.only(
+              top: MediaQuery.of(context).padding.top +
+                  20, // Adds padding for the status bar
+              left: 20,
+              right: 20,
+              bottom: 20,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -143,12 +151,32 @@ class SettingsPage extends StatelessWidget {
                       );
                     },
                   ),
-                  _buildListTile(Icons.delete, "Delete Account",
-                      color: const Color.fromARGB(255, 252, 82, 82),
-                      textColor: const Color.fromARGB(255, 252, 82, 82)),
-                  _buildListTile(Icons.support, "Contact Support",
-                      color: const Color.fromARGB(255, 111, 111, 112),
-                      textColor: Color.fromARGB(255, 111, 111, 112)),
+                  _buildListTile(
+                    Icons.delete,
+                    "Delete Account",
+                    color: const Color.fromARGB(255, 252, 82, 82),
+                    textColor: const Color.fromARGB(255, 252, 82, 82),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => DeleteAccountPage()),
+                      );
+                    },
+                  ),
+                  _buildListTile(
+                    Icons.support,
+                    "Contact Support",
+                    color: const Color.fromARGB(255, 111, 111, 112),
+                    textColor: Color.fromARGB(255, 111, 111, 112),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => ContactSupportPage()),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -226,20 +254,48 @@ class SettingsPage extends StatelessWidget {
   }
 
   Future<void> _signOut(BuildContext context) async {
-    try {
-      await FirebaseAuth.instance.signOut(); // Firebase sign-out
+    bool? confirmSignOut = await showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text("Sign Out"),
+          content: Text("Are you sure you want to sign out?"),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false); // User cancels
+              },
+              child: Text("No"),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true); // User confirms
+              },
+              child: Text("Yes"),
+            ),
+          ],
+        );
+      },
+    );
 
-      // Navigate to the login page & remove all previous pages from history
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(
-            builder: (context) => LoginScreen()), // Ensure you have this screen
-        (route) => false, // Removes all previous routes
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error signing out: ${e.toString()}")),
-      );
+    if (confirmSignOut == true) {
+      try {
+        await FirebaseAuth.instance.signOut();
+
+        if (!context.mounted) return;
+
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => LoginScreen()),
+          (route) => false,
+        );
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Error signing out: ${e.toString()}")),
+          );
+        }
+      }
     }
   }
 }
