@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:aura_app/cart_folder/cartMainPage.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -96,8 +97,8 @@ class _WishlistPageState extends State<WishlistPage> {
 
       await FirebaseFirestore.instance
           .collection('customers') // Use the 'customers' collection
-          .doc(user.uid) // Document for the logged-in user
-          .collection('wishlist') // The 'wishlist' sub-collection
+         .doc(user.uid) // Document for the logged-in user
+         .collection('wishlist') // The 'wishlist' sub-collection
           .doc(docId) // Document ID of the item to remove
           .delete();
 
@@ -107,7 +108,7 @@ class _WishlistPageState extends State<WishlistPage> {
       });
     } catch (e) {
       print("Error removing item: $e");
-    }
+   }
   }
 
   String truncateTitle(String title) {
@@ -277,8 +278,8 @@ class _WishlistPageState extends State<WishlistPage> {
                                               ),
                                             ),
                                             OutlinedButton(
-                                              onPressed: () {
-                                                // Move to cart functionality
+                                              onPressed: () async {
+                                              await moveToCart(item);
                                               },
                                               style: OutlinedButton.styleFrom(
                                                 foregroundColor: Colors.black,
@@ -327,7 +328,12 @@ class _WishlistPageState extends State<WishlistPage> {
           if (index == 0) {
             Navigator.pushReplacement(context,
                 MaterialPageRoute(builder: (context) => ProductsPage()));
-          } else if (index == 4) {
+          } else if (index == 2) {
+             Navigator.pushReplacement(
+             context,
+            MaterialPageRoute(builder: (context) => CartMainPage()),
+            );
+          }else if (index == 4) {
             Navigator.pushReplacement(context,
                 MaterialPageRoute(builder: (context) => SettingsPage()));
           }
@@ -345,4 +351,59 @@ class _WishlistPageState extends State<WishlistPage> {
       ),
     );
   }
+
+Future<void> moveToCart(Map<String, dynamic> item) async {
+  try {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    String userId = user.uid;
+
+    // Step 1: Check if the user already has a cart
+    var cartQuery = await FirebaseFirestore.instance
+        .collection('ShoppingCart')
+        .where('customerId', isEqualTo: userId)
+        .limit(1)
+        .get();
+
+    String cartId;
+
+    if (cartQuery.docs.isEmpty) {
+      // Step 2: Create a new cart if it doesn't exist
+      var newCartRef =
+          FirebaseFirestore.instance.collection('ShoppingCart').doc();
+      await newCartRef.set({'customerId': userId});
+      cartId = newCartRef.id;
+    } else {
+      // Step 3: Use existing cart ID
+      cartId = cartQuery.docs.first.id;
+    }
+
+    // Step 4: Add item to the cartItems subcollection with references only
+    await FirebaseFirestore.instance
+        .collection('ShoppingCart')
+        .doc(cartId)
+        .collection('cartItems')
+        .doc(item['productId']) // Use productId as document ID to prevent duplicates
+        .set({
+      'productId': item['productId'], // Save productId from clothes collection
+      'title': item['title'],         // Save product title (if available in the item map)
+      'image': item['image'],         // Save product image (if available in the item map)
+      'price': item['price'],         // Save product price (if available in the item map)
+      
+      'addedAt': FieldValue.serverTimestamp(),
+    });
+
+    // Step 5: Optionally remove item from wishlist if you have a wishlist collection
+    // If wishlist collection exists:
+    // await removeFromWishlist(item['docId']);
+
+    print("Item moved to ShoppingCart successfully!");
+  } catch (e) {
+    print("Error moving item to ShoppingCart: $e");
+  }
+}
+
+
+
 }
