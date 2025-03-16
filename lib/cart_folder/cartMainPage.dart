@@ -1,5 +1,6 @@
 import 'package:aura_app/Home/listMode.dart';
 import 'package:aura_app/Settings/settings.dart';
+import 'package:aura_app/cart_folder/orderSummaryPage.dart';
 import 'package:aura_app/cart_folder/paymentMethodSelectionPage.dart';
 import 'package:aura_app/cart_folder/shippingAddressSelectionPage.dart';
 import 'package:aura_app/wishlist/wishlist.dart';
@@ -103,74 +104,172 @@ class _CartMainPageState extends State<CartMainPage> {
     }
   }
 
-  Future<void> updateCartItem(Map<String, dynamic> item) async {
-    try {
-      User? user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
+  Future<void> _updateCartItem(Map<String, dynamic> item, String field, dynamic newValue) async {
+  try {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-      String userId = user.uid;
-      var cartQuery = await FirebaseFirestore.instance
-          .collection('ShoppingCart')
-          .where('customerId', isEqualTo: userId)
-          .limit(1)
-          .get();
+    String userId = user.uid;
+    var cartQuery = await FirebaseFirestore.instance
+        .collection('ShoppingCart')
+        .where('customerId', isEqualTo: userId)
+        .limit(1)
+        .get();
 
-      if (cartQuery.docs.isEmpty) return;
+    if (cartQuery.docs.isEmpty) return;
 
-      String cartId = cartQuery.docs.first.id;
+    String cartId = cartQuery.docs.first.id;
 
-      await FirebaseFirestore.instance
-          .collection('ShoppingCart')
-          .doc(cartId)
-          .collection('cartItems')
-          .doc(item['Item_id'])
-          .update({
-        'color': item['color'],
-        'size': item['size'],
-      });
+    await FirebaseFirestore.instance
+        .collection('ShoppingCart')
+        .doc(cartId)
+        .collection('cartItems')
+        .doc(item['Item_id'])
+        .update({field: newValue});
 
-      setState(() {
-        cartItems = cartItems.map((cartItem) {
-          if (cartItem['Item_id'] == item['Item_id']) {
-            return {
-              ...cartItem,
-              'color': item['color'],
-              'size': item['size'],
-            };
-          }
-          return cartItem;
-        }).toList();
-      });
-    } catch (e) {
-      print("Error updating cart item: $e");
-    }
+    setState(() {
+      cartItems = cartItems.map((cartItem) {
+        if (cartItem['Item_id'] == item['Item_id']) {
+          return {
+            ...cartItem,
+            field: newValue,
+          };
+        }
+        return cartItem;
+      }).toList();
+    });
+
+    print("$field updated to $newValue for item ${item['Item_id']}");
+  } catch (e) {
+    print("Error updating cart item: $e");
   }
+}
 
-  Widget _buildCartItem(Map<String, dynamic> item) {
-    return ListTile(
-      leading: Image.network(
-        item['images'],
-        width: 50,
-        height: 50,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => Icon(Icons.error),
-      ),
-      title: Text(item['title']),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text("Color: ${item['colors']}"),
-          
-  
-          Text("Price: ${item['price']} SAR"),
-        ],
-      ),
-      trailing: IconButton(
-        icon: Icon(Icons.delete, color: Colors.red),
-        onPressed: () => removeCartItem(item['Item_id']),
-      ),
-    );
-  }
+
+Widget _buildCartItem(Map<String, dynamic> item) {
+  return FutureBuilder<DocumentSnapshot>(
+    future: FirebaseFirestore.instance.collection('clothes').doc(item['Item_id']).get(),
+    builder: (context, snapshot) {
+      if (!snapshot.hasData) return CircularProgressIndicator();
+
+      var productData = snapshot.data!.data() as Map<String, dynamic>? ?? {};
+      List<String> availableColors = (productData['colors'] as List<dynamic>?)?.map((c) => c.toString()).toList() ?? [];
+      List<String> availableSizes = (productData['sizes'] as List<dynamic>?)?.map((s) => s.toString()).toList() ?? [];
+
+      return Card(
+        margin: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+        elevation: 2,
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Image.network(
+                    item['images'],
+                    width: 60,
+                    height: 60,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Icon(Icons.error),
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item['title'],
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        SizedBox(height: 6),
+                        Text("Price: ${item['price']} SAR"),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.delete, color: Colors.red),
+                    onPressed: () => removeCartItem(item['Item_id']),
+                  ),
+                ],
+              ),
+              SizedBox(height: 10),
+
+              // Dropdown for Colors
+              DropdownButtonFormField<String>(
+                value: item['colors'],
+                items: availableColors.map((color) {
+                  return DropdownMenuItem(
+                    value: color,
+                    child: Text(color),
+                  );
+                }).toList(),
+                onChanged: (newColor) {
+                  if (newColor != null) {
+                    _updateCartItem(item, 'color', newColor);
+                  }
+                },
+                decoration: InputDecoration(labelText: "Select Color"),
+              ),
+
+              SizedBox(height: 10),
+
+              // Dropdown for Sizes
+              DropdownButtonFormField<String>(
+                value: item['sizes'],
+                items: availableSizes.map((size) {
+                  return DropdownMenuItem(
+                    value: size,
+                    child: Text(size),
+                  );
+                }).toList(),
+                onChanged: (newSize) {
+                  if (newSize != null) {
+                    _updateCartItem(item, 'size', newSize);
+                  }
+                },
+                decoration: InputDecoration(labelText: "Select Size"),
+              ),
+
+              SizedBox(height: 10),
+
+              // Quantity Selector (Stepper)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text("Quantity:"),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.remove),
+                        onPressed: () {
+                          int newQuantity = (item['quantity'] ?? 1) - 1;
+                          if (newQuantity >= 1) {
+                            _updateCartItem(item, 'quantity', newQuantity);
+                          }
+                        },
+                      ),
+                      Text("${item['quantity'] ?? 1}"),
+                      IconButton(
+                        icon: Icon(Icons.add),
+                        onPressed: () {
+                          int newQuantity = (item['quantity'] ?? 1) + 1;
+                          _updateCartItem(item, 'quantity', newQuantity);
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
 
   Future<void> removeCartItem(String itemId) async {
     try {
@@ -250,27 +349,37 @@ class _CartMainPageState extends State<CartMainPage> {
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ShippingAddressSelectionPage(
-                            onAddressSelected: (selectedAddress) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => PaymentMethodSelectionPage(
-                                    onPaymentMethodSelected: (selectedPaymentMethod) {
-                                      print("Selected Payment Method: ${selectedPaymentMethod['type']}");
-                                    },
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      );
-                    },
+onPressed: () {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => ShippingAddressSelectionPage(
+        onAddressSelected: (selectedAddress) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PaymentMethodSelectionPage(
+                onPaymentMethodSelected: (selectedPaymentMethod) {
+                  // Proceed to order summary
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => OrderSummaryPage(
+                        selectedAddress: selectedAddress,
+                        selectedPaymentMethod: selectedPaymentMethod,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          );
+        },
+      ),
+    ),
+  );
+},
+
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
                       foregroundColor: Colors.white,

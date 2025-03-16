@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart'; // For sharing feature
 
@@ -19,6 +21,8 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
   @override
   Widget build(BuildContext context) {
     final item = widget.itemDetails;
+    print("Product ID: ${widget.itemDetails['productId']}");
+
 
     return Scaffold(
       appBar: AppBar(
@@ -105,25 +109,77 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
               const SizedBox(height: 16),
               // Add to Cart Button
               ElevatedButton(
-                onPressed: () {
-                  if (selectedColor == null || selectedSize == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text("Please select size and color"),
-                      ),
-                    );
-                    return;
-                  }
-                  Navigator.pushNamed(
-                    context,
-                    '/lib/cart_folder/cartMainPage.dart',
-                    arguments: {
-                      'itemId': item['item_id'],
-                      'color': selectedColor,
-                      'size': selectedSize,
-                    },
-                  );
-                },
+onPressed: () async {
+  if (selectedColor == null || selectedSize == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Please select size and color"),
+      ),
+    );
+    return;
+  }
+
+  final user = FirebaseAuth.instance.currentUser;
+
+  if (user != null) {
+    String userId = user.uid;
+
+    // Step 1: Check if ShoppingCart exists
+    var cartQuery = await FirebaseFirestore.instance
+        .collection('ShoppingCart')
+        .where('customerId', isEqualTo: userId)
+        .limit(1)
+        .get();
+
+    String cartId;
+    if (cartQuery.docs.isEmpty) {
+      // Create new cart
+      var newCartRef = FirebaseFirestore.instance.collection('ShoppingCart').doc();
+      await newCartRef.set({
+        'customerId': userId,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      cartId = newCartRef.id;
+    } else {
+      // Use existing cart
+      cartId = cartQuery.docs.first.id;
+    }
+
+    // Step 2: Save cart item (minimal data + customization)
+    await FirebaseFirestore.instance
+        .collection('ShoppingCart')
+        .doc(cartId)
+        .collection('cartItems')
+        .doc(item['productId']) // Using the product doc ID from Firestore as doc ID
+        .set({
+      'productId': item['productId'], // product ID from the clothes collection
+      'title': item['title'],
+      'image': (item['images'] as List).isNotEmpty ? item['images'][0] : '',
+      'price': item['price'],
+      'store_id': item['store_id'],
+      'color': selectedColor,
+      'size': selectedSize,
+      'quantity': 1,
+      'addedAt': FieldValue.serverTimestamp(),
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Item added to cart successfully"),
+      ),
+    );
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("You must be logged in to add items to cart"),
+      ),
+    );
+  }
+},
+
+
+
+
                 child: Text("Add to Cart"),
                 style: ElevatedButton.styleFrom(
                   padding: EdgeInsets.symmetric(vertical: 16),

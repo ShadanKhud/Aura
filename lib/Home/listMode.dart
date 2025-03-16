@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:aura_app/cart_folder/cartMainPage.dart';
 import 'package:aura_app/itemDetails/ItemDetailsPage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -116,22 +117,31 @@ class _ProductsPageState extends State<ProductsPage> {
     super.dispose();
   }
 
-  void _selectProduct(Map<String, dynamic> product) {
-    setState(() {
-      _selectedProduct = product;
-    });
-  }
+void _selectProduct(DocumentSnapshot productSnapshot) {
+  final productData = productSnapshot.data() as Map<String, dynamic>;
 
-  void _NavToDetialsPage() {
-    if (_selectedProduct != null) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ItemDetailsPage(itemDetails: _selectedProduct!),
-        ),
-      );
-    }
+  // Add the document ID to the product data map
+// In _selectProduct() 
+productData['productId'] = productSnapshot.id; // instead of 'id'
+
+  setState(() {
+    _selectedProduct = productData;
+  });
+}
+
+
+ void _NavToDetialsPage() {
+  if (_selectedProduct != null) {
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ItemDetailsPage(itemDetails: _selectedProduct!),
+      ),
+    );
   }
+}
+
 
   void _deselectProduct() {
     setState(() {
@@ -578,17 +588,19 @@ class _ProductsPageState extends State<ProductsPage> {
                             );
                           }
 
-                          return ProductCard(
-                            product: product,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      ItemDetailsPage(itemDetails: product),
-                                ),
-                              );
-                            },
+                     return ProductCard(
+  product: product,
+  onTap: () {
+    final productData = Map<String, dynamic>.from(product);
+    productData['productId'] = productSnapshot.id; // Ensure product ID is passed
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ItemDetailsPage(itemDetails: productData),
+      ),
+    );
+  },
                             onHeartPressed: () =>
                                 _addToWishlist(productSnapshot),
                           );
@@ -616,7 +628,7 @@ class _ProductsPageState extends State<ProductsPage> {
             // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => SearchPage()));
           } else if (index == 2) {
             // Cart Page
-            // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => CartPage()));
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => CartMainPage()));
           } else if (index == 3) {
             Navigator.pushReplacement(
               context,
