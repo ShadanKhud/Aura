@@ -39,82 +39,120 @@ class _AddCardPageState extends State<AddCardPage> {
     }
     return (sum % 10 == 0);
   }
+Future<void> _addPaymentMethod() async {
+  try {
+    if (!_cardComplete) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Card details not complete!")),
+      );
+      return;
+    }
 
-  Future<void> _addPaymentMethod() async {
-    try {
-      if (!_cardComplete) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Card details not complete!")),
-        );
-        return;
-      }
-
-      // Step 1: Create a Stripe payment method
-      final paymentMethod = await Stripe.instance.createPaymentMethod(
-        params: PaymentMethodParams.card(
-          paymentMethodData: PaymentMethodData(
-            billingDetails: BillingDetails(
-              name: _nameController.text,
-            ),
+    // Step 1: Create a Stripe payment method
+    final paymentMethod = await Stripe.instance.createPaymentMethod(
+      params: PaymentMethodParams.card(
+        paymentMethodData: PaymentMethodData(
+          billingDetails: BillingDetails(
+            name: _nameController.text,
           ),
         ),
+      ),
+    );
+
+    // Step 2: Retrieve user document from Firestore (Customers collection)
+    DocumentReference customerRef = FirebaseFirestore.instance.collection('customers').doc(userId);
+    DocumentSnapshot customerDoc = await customerRef.get();
+
+    String? stripeCustomerId;
+
+    if (customerDoc.exists) {
+      Map<String, dynamic> customerData = customerDoc.data() as Map<String, dynamic>;
+
+      // Check if customer already has a Stripe customer ID
+      if (customerData.containsKey('stripeCustomerId')) {
+        stripeCustomerId = customerData['stripeCustomerId'];
+        print('Stripe customer already exists: $stripeCustomerId');
+      }
+    }
+
+    // Step 3: If no Stripe customer ID, create one
+    if (stripeCustomerId == null) {
+      final customerResponse = await http.post(
+        Uri.parse('https://api.stripe.com/v1/customers'),
+        headers: {
+          'Authorization': 'Bearer sk_test_51Qrl4ARth5SQH9HL6u9t5ryvllJyPSpGVtTFt3xY4US1tki0kIvdCiRnkSO3BHGWIMI6I4zImWk5nsndcreUrfJz004vj2yoQM', // Replace with your secret key
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: {
+          'email': FirebaseAuth.instance.currentUser!.email ?? '',
+        },
       );
 
-      // Step 2: Check if user already has a Stripe customerId
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      final customerData = json.decode(customerResponse.body);
+      stripeCustomerId = customerData['id'];
 
-      if (userDoc.exists) {
-        Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
-
-        // Check if the user already has a stripeCustomerId
-        if (!userData.containsKey('stripeCustomerId')) {
-          // If no stripeCustomerId exists, create a new Stripe customer
-          final customerResponse = await http.post(
-            Uri.parse('https://api.stripe.com/v1/customers'),
-            headers: {
-              'Authorization': 'Bearer sk_test_51Qrl4ARth5SQH9HL6u9t5ryvllJyPSpGVtTFt3xY4US1tki0kIvdCiRnkSO3BHGWIMI6I4zImWk5nsndcreUrfJz004vj2yoQM',  // Replace with your secret key
-              'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: {
-              'email': FirebaseAuth.instance.currentUser!.email ?? '',
-            },
-          );
-
-          final customerData = json.decode(customerResponse.body);
-          final stripeCustomerId = customerData['id'];
-
-          // Step 3: Save stripeCustomerId in Firestore (users collection)
-          await FirebaseFirestore.instance.collection('users').doc(userId).update({
-            'stripeCustomerId': stripeCustomerId,
-          });
-
-          print('Stripe customer created and stripeCustomerId saved: $stripeCustomerId');
-        } else {
-          print('Stripe customer already exists with id: ${userData['stripeCustomerId']}');
-        }
-      } else {
-        print("User document does not exist.");
-      }
-
-      // Step 4: Save card details in Firestore (cards collection)
-      await FirebaseFirestore.instance.collection('cards').add({
-        'customerId': userId,
-        'name': _nameController.text,
-        'type': cardType,
-        'paymentMethodId': paymentMethod.id,
+      // Step 4: Save stripeCustomerId in the customers collection in Firestore
+      await customerRef.set({
+        'stripeCustomerId': stripeCustomerId,
+        'email': FirebaseAuth.instance.currentUser!.email ?? '',
+        'createdAt': FieldValue.serverTimestamp(),
+      }).catchError((error) {
+        print("Firestore save failed: $error");
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Card added successfully!")),
-      );
-
-      Navigator.pop(context);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
+      print('Stripe customer created and saved in customers collection: $stripeCustomerId');
     }
+
+    // Step 5: Attach the payment method to the Stripe customer
+    final attachResponse = await http.post(
+      Uri.parse('https://api.stripe.com/v1/payment_methods/${paymentMethod.id}/attach'),
+      headers: {
+        'Authorization': 'Bearer sk_test_51Qrl4ARth5SQH9HL6u9t5ryvllJyPSpGVtTFt3xY4US1tki0kIvdCiRnkSO3BHGWIMI6I4zImWk5nsndcreUrfJz004vj2yoQM', // Use your actual secret key
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: {
+        'customer': stripeCustomerId!,
+      },
+    );
+
+    final attachData = json.decode(attachResponse.body);
+
+    if (attachResponse.statusCode != 200) {
+      print('Failed to attach payment method: ${attachData['error']['message']}');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error attaching payment method: ${attachData['error']['message']}')),
+      );
+      return;
+    }
+
+    print('Payment Method successfully attached: ${paymentMethod.id}');
+
+    // Step 6: Save card details in Firestore (Optional: You can also store the card in a separate collection)
+    await FirebaseFirestore.instance.collection('cards').add({
+      'customerId': userId,
+      'stripeCustomerId': stripeCustomerId, // Save Stripe customer ID
+      'name': _nameController.text,
+      'type': cardType,
+      'paymentMethodId': paymentMethod.id,
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Card added successfully!")),
+    );
+
+    Navigator.pop(context);
+  } catch (e) {
+    print("Error: $e");
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Error: $e")),
+    );
   }
+}
+
+
+
+
+
 
   Widget _buildTextField(String label, String hint, TextEditingController controller,
       {TextInputType keyboardType = TextInputType.text, bool obscureText = false, int? maxLength, List<TextInputFormatter>? inputFormatters}) {
