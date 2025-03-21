@@ -21,7 +21,6 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
   @override
   Widget build(BuildContext context) {
     final item = widget.itemDetails;
-    print("Product ID: ${widget.itemDetails['productId']}");
 
 
     return Scaffold(

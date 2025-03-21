@@ -69,7 +69,10 @@ class _ShippingAddressSelectionPageState extends State<ShippingAddressSelectionP
                         trailing: Icon(Icons.check_circle, color: _selectedAddress == address ? Colors.blue : Colors.grey),
                         onTap: () {
                           setState(() {
-                            _selectedAddress = address;
+                                _selectedAddress = {
+      ...address,
+      'id': doc.id, // <-- Add the doc.id here
+    };
                           });
                         },
                       ),
@@ -83,25 +86,33 @@ class _ShippingAddressSelectionPageState extends State<ShippingAddressSelectionP
           Padding(
             padding: const EdgeInsets.all(16),
             child: ElevatedButton(
-              onPressed: _selectedAddress == null ? null : () {
-                widget.onAddressSelected(_selectedAddress!);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => PaymentMethodSelectionPage(
-                    onPaymentMethodSelected: (selectedPaymentMethod) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => OrderSummaryPage(
-                          selectedAddress: _selectedAddress!,
-                          selectedPaymentMethod: selectedPaymentMethod,
-                        )),
-                      );
-                    },
-                  )),
-                );
-              },
-              child: Text("Continue"),
+  onPressed: _selectedAddress == null
+      ? null
+      : () {
+          widget.onAddressSelected(_selectedAddress!);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PaymentMethodSelectionPage(
+                onPaymentMethodSelected: (selectedPaymentMethod) {
+                  // Go to Order Summary Page
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => OrderSummaryPage(
+                        selectedAddress: _selectedAddress!,
+                        selectedPaymentMethod: selectedPaymentMethod,
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
+          );
+        },
+  child: Text("Continue"),
+),
+
           ),
         ],
       ),

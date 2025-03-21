@@ -23,86 +23,76 @@ class _CartMainPageState extends State<CartMainPage> {
     fetchCartItems();
   }
 
-  Future<void> fetchCartItems() async {
-    try {
-      User? user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
+Future<void> fetchCartItems() async {
+  try {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-      String userId = user.uid;
+    String userId = user.uid;
 
-      // Fetch user's shopping cart
-      var cartQuery = await FirebaseFirestore.instance
-          .collection('ShoppingCart')
-          .where('customerId', isEqualTo: userId)
-          .limit(1)
+    // Fetch user's shopping cart
+    var cartQuery = await FirebaseFirestore.instance
+        .collection('ShoppingCart')
+        .where('customerId', isEqualTo: userId)
+        .limit(1)
+        .get();
+
+    if (cartQuery.docs.isEmpty) return;
+
+    String cartId = cartQuery.docs.first.id;
+
+    // Fetch cart items
+    var cartItemsSnapshot = await FirebaseFirestore.instance
+        .collection('ShoppingCart')
+        .doc(cartId)
+        .collection('cartItems')
+        .get();
+
+    List<Map<String, dynamic>> fetchedItems = [];
+
+    for (var doc in cartItemsSnapshot.docs) {
+      String itemId = doc['productId'];
+      String selectedColor = doc['color'] ?? 'Unknown';
+      String selectedSize = doc['size'] ?? 'Unknown';
+      int quantity = doc['quantity'] ?? 1;
+
+      // Fetch product details from 'clothes'
+      var productDoc = await FirebaseFirestore.instance
+          .collection('clothes')
+          .doc(itemId)
           .get();
 
-      if (cartQuery.docs.isEmpty) return; // No cart found
+      if (productDoc.exists) {
+        var productData = productDoc.data() ?? {};
 
-      String cartId = cartQuery.docs.first.id;
+        String title = productData['title'] ?? 'Unknown Product';
+        String image = (productData['images'] as List<dynamic>?)?.isNotEmpty == true
+            ? productData['images'][0]
+            : 'https://via.placeholder.com/50';
+        double price = double.tryParse(productData['price'] ?? '') ?? 0.0;
+        String storeId = productData['store_id'] ?? 'Unknown Store';
 
-      // Fetch cart items
-      var cartItemsSnapshot = await FirebaseFirestore.instance
-          .collection('ShoppingCart')
-          .doc(cartId)
-          .collection('cartItems')
-          .get();
-
-      List<Map<String, dynamic>> fetchedItems = [];
-
-      // Loop over each cart item
-      for (var doc in cartItemsSnapshot.docs) {
-        String itemId = doc['productId']; // Assuming 'productId' is the document ID in the 'cartItems' collection
-
-        print("Fetching product document for productId: $itemId");
-
-        // Fetch product details using itemId from the 'Clothes' collection
-        var productDoc = await FirebaseFirestore.instance
-            .collection('clothes')
-            .doc(itemId)
-            .get();
-
-        if (productDoc.exists) {
-          var productData = productDoc.data() ?? {};
-
-          // Handle null values by providing default values
-          String title = productData['title'] ?? 'Unknown Product';
-          String image = (productData['images'] as List<dynamic>?)?.isNotEmpty == true
-              ? productData['images'][0]
-              : 'https://via.placeholder.com/50';
-          String color = (productData['colors'] as List<dynamic>?)?.isNotEmpty == true
-              ? productData['colors'][0]
-              : 'Unknown';
-          String size = (productData['sizes'] as List<dynamic>?)?.isNotEmpty == true
-              ? productData['sizes'][0]
-              : 'Unknown';
-          
-          // Convert price from string to double, with a fallback of 0.0
-          double price = double.tryParse(productData['price'] ?? '') ?? 0.0;
-
-          String storeId = productData['store_id'] ?? 'Unknown Store';
-
-          fetchedItems.add({
-            'Item_id': itemId,
-            'title': title,
-            'images': image,
-            'colors': color,
-            'sizes': size,
-            'price': price,
-            'store_id': storeId,
-          });
-        } else {
-          print("Product document for $itemId not found.");
-        }
+        fetchedItems.add({
+          'Item_id': itemId,
+          'title': title,
+          'images': image,
+          'colors': selectedColor, // use from cartItems
+          'sizes': selectedSize,   // use from cartItems
+          'price': price,
+          'store_id': storeId,
+          'quantity': quantity,
+        });
       }
-
-      setState(() {
-        cartItems = fetchedItems;
-      });
-    } catch (e) {
-      print("Error fetching cart items: $e");
     }
+
+    setState(() {
+      cartItems = fetchedItems;
+    });
+  } catch (e) {
+    print("Error fetching cart items: $e");
   }
+}
+
 
   Future<void> _updateCartItem(Map<String, dynamic> item, String field, dynamic newValue) async {
   try {
